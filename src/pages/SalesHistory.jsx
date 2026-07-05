@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import { useInventory } from "../context/InventoryContext";
 import { useSales } from "../context/SalesContext";
-import { supabase } from "../lib/supabaseClient";
 import { isAdminOrOwner } from "../utils/authRoles";
 
 const formatCurrency = (value) => `PHP ${Number(value).toFixed(2)}`;
@@ -79,32 +78,13 @@ const getDefaultRecordForm = () => ({
   notes: ""
 });
 
-export default function SalesHistory({ onLogout }) {
+export default function SalesHistory({ onLogout, currentUser }) {
   const { inventory } = useInventory();
   const { salesHistory, addSale, clearRecordedSales, deleteSaleRecord } = useSales();
   const [showRecord, setShowRecord] = useState(false);
   const [filterDate, setFilterDate] = useState("");
   const [recordError, setRecordError] = useState("");
   const [recordForm, setRecordForm] = useState(getDefaultRecordForm);
-  const [currentUser, setCurrentUser] = useState(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!isMounted) return;
-      setCurrentUser(data.user ?? null);
-    });
-
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setCurrentUser(session?.user ?? null);
-    });
-
-    return () => {
-      isMounted = false;
-      data?.subscription?.unsubscribe();
-    };
-  }, []);
-
   const canManageSalesHistory = isAdminOrOwner(currentUser);
 
   const inventoryProductOptions = useMemo(() => {

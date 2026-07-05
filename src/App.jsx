@@ -14,6 +14,7 @@ import { SalesProvider } from "./context/SalesContext";
 
 function AppShell() {
   const [isAuthed, setIsAuthed] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [showLoginToast, setShowLoginToast] = useState(false);
   const [toastEntered, setToastEntered] = useState(false);
 
@@ -45,10 +46,12 @@ function AppShell() {
     supabase.auth.getSession().then(({ data }) => {
       if (!isMounted) return;
       setIsAuthed(Boolean(data.session));
+      setCurrentUser(data.session?.user ?? null);
     });
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthed(Boolean(session));
+      setCurrentUser(session?.user ?? null);
     });
 
     return () => {
@@ -60,8 +63,12 @@ function AppShell() {
   useEffect(() => {
     const shouldShow = sessionStorage.getItem("login_toast") === "1";
     if (isAuthed && shouldShow) {
-      handleLogin();
-      sessionStorage.removeItem("login_toast");
+      const timer = setTimeout(() => {
+        handleLogin();
+        sessionStorage.removeItem("login_toast");
+      }, 0);
+
+      return () => clearTimeout(timer);
     }
   }, [isAuthed]);
 
@@ -83,7 +90,13 @@ function AppShell() {
         />
         <Route
           path="/sales"
-          element={isAuthed ? <SalesHistory onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+          element={
+            isAuthed ? (
+              <SalesHistory onLogout={handleLogout} currentUser={currentUser} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
         <Route
           path="/restock"
