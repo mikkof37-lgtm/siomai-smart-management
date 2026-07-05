@@ -30,7 +30,7 @@ const normalizeUnit = (unit) => {
 
 export default function Inventory({ onLogout }) {
 
-const { inventory, setInventory } = useInventory();
+const { inventory, setInventory, isLoadingInventory, inventorySyncError } = useInventory();
 const { settings } = useSettings();
 const [query, setQuery] = useState("");
 const [sortBy, setSortBy] = useState("manual");
@@ -289,6 +289,14 @@ return (
   <div>
     <h1 className="text-2xl font-semibold text-[#2b2018]">Inventory Management</h1>
     <p className="text-sm text-[#8c7b6d]">Track and manage all warehouse stock.</p>
+    {isLoadingInventory && (
+      <p className="mt-2 text-xs font-medium text-[#c27a1a]">
+        Loading synced inventory from Supabase...
+      </p>
+    )}
+    {!isLoadingInventory && inventorySyncError && (
+      <p className="mt-2 text-xs font-medium text-[#c27a1a]">{inventorySyncError}</p>
+    )}
   </div>
   <button
     type="button"
