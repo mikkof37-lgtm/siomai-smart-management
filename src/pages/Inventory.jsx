@@ -3,6 +3,7 @@ import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import { useInventory } from "../context/InventoryContext";
 import { useSettings } from "../context/SettingsContext";
+import { isAdminOrOwner } from "../utils/authRoles";
 
 const UNIT_OPTIONS = [
   { value: "pieces", label: "pieces" },
@@ -28,10 +29,11 @@ const normalizeUnit = (unit) => {
   return UNIT_OPTIONS.some((option) => option.value === value) ? value : "";
 };
 
-export default function Inventory({ onLogout }) {
+export default function Inventory({ onLogout, currentUser }) {
 
 const { inventory, setInventory, isLoadingInventory, inventorySyncError } = useInventory();
 const { settings } = useSettings();
+const canManageInventory = isAdminOrOwner(currentUser);
 const [query, setQuery] = useState("");
 const [sortBy, setSortBy] = useState("manual");
 const [showForm, setShowForm] = useState(false);
@@ -188,6 +190,7 @@ const handleAddItem = (e) => {
 };
 
 const openEdit = (item) => {
+  if (!canManageInventory) return;
   setEditError("");
   setEditingItem(item);
   setEditForm({
@@ -208,6 +211,7 @@ const closeEdit = () => {
 };
 
 const handleDelete = (id) => {
+  if (!canManageInventory) return;
   setInventory((prev) => prev.filter((item) => item.id !== id));
   if (editingItem && editingItem.id === id) {
     closeEdit();
@@ -216,6 +220,7 @@ const handleDelete = (id) => {
 
 const handleEditSave = (e) => {
   e.preventDefault();
+  if (!canManageInventory) return;
   setEditError("");
 
   const name = editForm.name.trim();
@@ -491,7 +496,7 @@ return (
     <div>Current Stock</div>
     <div>Unit Cost</div>
     <div>Status</div>
-    <div className="text-right">Actions</div>
+    {canManageInventory && <div className="text-right">Actions</div>}
   </div>
 
   <div className="divide-y divide-[#f4ede4]">
@@ -507,7 +512,14 @@ return (
         : "bg-[#e8f7ee] text-[#1e9e61]";
 
       return (
-        <div key={item.id} className="grid grid-cols-[2fr_1.2fr_1fr_1fr_0.9fr_80px] items-center px-6 py-4">
+        <div
+          key={item.id}
+          className={`grid items-center px-6 py-4 ${
+            canManageInventory
+              ? "grid-cols-[2fr_1.2fr_1fr_1fr_0.9fr_80px]"
+              : "grid-cols-[2fr_1.2fr_1fr_1fr_0.9fr]"
+          }`}
+        >
           <div className="font-semibold text-[#2b2018]">{item.name}</div>
           <div className="text-sm text-[#8c7b6d]">{item.category}</div>
           <div className="text-sm font-semibold text-[#2b2018]">
@@ -521,44 +533,46 @@ return (
               {statusLabel.toUpperCase()}
             </span>
           </div>
-          <div className="flex justify-end gap-3 text-[#9a8b7d]">
-            <button
-              type="button"
-              onClick={() => openEdit(item)}
-              className="hover:text-[#ff7a1a]"
-              aria-label="Edit item"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                <path
-                  d="M4 20h4l10-10-4-4L4 16v4Z"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M13 6l4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDelete(item.id)}
-              className="hover:text-[#ff6a5a]"
-              aria-label="Delete item"
-            >
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
-                <path
-                  d="M5 7h14M9 7V5h6v2m-7 4v6m4-6v6m4-6v6M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </div>
+          {canManageInventory && (
+            <div className="flex justify-end gap-3 text-[#9a8b7d]">
+              <button
+                type="button"
+                onClick={() => openEdit(item)}
+                className="hover:text-[#ff7a1a]"
+                aria-label="Edit item"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                  <path
+                    d="M4 20h4l10-10-4-4L4 16v4Z"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M13 6l4 4"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(item.id)}
+                className="hover:text-[#ff6a5a]"
+                aria-label="Delete item"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+                  <path
+                    d="M5 7h14M9 7V5h6v2m-7 4v6m4-6v6m4-6v6M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       );
     })}
@@ -571,7 +585,7 @@ return (
 
 </div>
 
-{editingItem && (
+{editingItem && canManageInventory && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 py-10">
     <div className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-2xl">
       <div className="flex items-center justify-between">

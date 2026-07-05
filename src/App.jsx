@@ -86,7 +86,13 @@ function AppShell() {
         />
         <Route
           path="/inventory"
-          element={isAuthed ? <Inventory onLogout={handleLogout} /> : <Navigate to="/login" replace />}
+          element={
+            isAuthed ? (
+              <Inventory onLogout={handleLogout} currentUser={currentUser} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
         />
         <Route
           path="/sales"
