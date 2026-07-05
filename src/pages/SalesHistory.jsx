@@ -28,12 +28,31 @@ const formatDisplayDate = (dateValue) => {
 const normalizeText = (value) =>
   typeof value === "string" ? value.trim().toLowerCase() : "";
 
+const SIOMAI_BUNDLE_PRICING = new Map([
+  ["regular pork siomai", { bundlePrice: 16, bundleQty: 3 }],
+  ["chicken siomai", { bundlePrice: 16, bundleQty: 3 }],
+  ["premium pork siomai", { bundlePrice: 18, bundleQty: 3 }],
+  ["japanese siomai", { bundlePrice: 20, bundleQty: 3 }]
+]);
+
 const resolveInventoryItem = (inventory, productName) => {
   const normalized = normalizeText(productName);
   if (!normalized) return null;
 
   const directMatch = inventory.find((item) => normalizeText(item.name) === normalized);
   return directMatch || null;
+};
+
+const getSaleUnitPrice = (inventoryItem) => {
+  if (!inventoryItem) return 0;
+
+  const normalizedName = normalizeText(inventoryItem.name);
+  const bundlePricing = SIOMAI_BUNDLE_PRICING.get(normalizedName);
+  if (bundlePricing) {
+    return bundlePricing.bundlePrice / bundlePricing.bundleQty;
+  }
+
+  return Number(inventoryItem.price || 0);
 };
 
 const getDefaultRecordForm = () => ({
@@ -64,8 +83,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
   const selectedInventoryItem = resolveInventoryItem(inventory, recordForm.product);
 
   const unitPrice = useMemo(() => {
-    if (!selectedInventoryItem) return 0;
-    return Number(selectedInventoryItem.price || 0);
+    return getSaleUnitPrice(selectedInventoryItem);
   }, [selectedInventoryItem]);
 
   const recordTotal = useMemo(() => {
@@ -156,7 +174,12 @@ export default function SalesHistory({ onLogout, currentUser }) {
   }, [filterDate, salesHistory]);
 
   const pricingHint = selectedInventoryItem
-    ? `Matched inventory item: ${selectedInventoryItem.name}`
+    ? SIOMAI_BUNDLE_PRICING.has(normalizeText(selectedInventoryItem.name))
+      ? (() => {
+          const bundlePricing = SIOMAI_BUNDLE_PRICING.get(normalizeText(selectedInventoryItem.name));
+          return `Special pricing: PHP ${bundlePricing.bundlePrice.toFixed(2)} per ${bundlePricing.bundleQty} pieces for ${selectedInventoryItem.name}.`;
+        })()
+      : `Matched inventory item: ${selectedInventoryItem.name}`
     : "Choose an exact product from inventory to auto-calculate the total.";
   const tableGridClass = canManageSalesHistory
     ? "grid-cols-[1.1fr_2fr_0.8fr_1fr_1fr_88px]"
