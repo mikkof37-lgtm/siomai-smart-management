@@ -204,9 +204,11 @@ export function SalesProvider({ children }) {
         }
 
         setSalesSyncError("");
-      } catch {
+      } catch (error) {
+        // Surface the actual failure so we can fix the backend instead of guessing.
+        console.error("Sales sync failed:", error);
         setSalesSyncError(
-          `Sales changes were saved locally, but Supabase sync failed for "${SALES_TABLE}".`
+          `Sales changes were saved locally, but Supabase sync failed for "${SALES_TABLE}". ${error?.message || ""}`.trim()
         );
       }
     },

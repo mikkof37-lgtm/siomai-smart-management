@@ -64,8 +64,8 @@ function normalizeItem(item) {
     stock: Number(item.stock ?? 0),
     threshold: Number(item.threshold ?? 0),
     price: Number(item.price ?? 0),
-    minStock: normalizeNumber(item.minStock),
-    maxStock: normalizeNumber(item.maxStock),
+    minStock: normalizeNumber(item.minStock ?? item.minstock),
+    maxStock: normalizeNumber(item.maxStock ?? item.maxstock),
     updatedAt:
       typeof item.updatedAt === "string"
         ? item.updatedAt
@@ -90,8 +90,8 @@ function toInventoryRow(item) {
     unit: normalizeUnit(item.unit),
     threshold: Number(item.threshold || 0),
     price: Number(item.price || 0),
-    minStock: normalizeNumber(item.minStock) ?? null,
-    maxStock: normalizeNumber(item.maxStock) ?? null,
+    minstock: normalizeNumber(item.minStock) ?? null,
+    maxstock: normalizeNumber(item.maxStock) ?? null,
     updatedat: item.updatedAt || new Date().toISOString()
   };
 }
@@ -191,10 +191,12 @@ export function InventoryProvider({ children }) {
         }
 
         setInventorySyncError("");
-      } catch {
+      } catch (error) {
+        // Surface the actual failure so we can fix the backend instead of guessing.
+        console.error("Inventory sync failed:", error);
         // Keep local changes even if the remote write fails.
         setInventorySyncError(
-          `Inventory changes were saved locally, but Supabase sync failed for "${INVENTORY_TABLE}". Check the browser console for the Supabase error.`
+          `Inventory changes were saved locally, but Supabase sync failed for "${INVENTORY_TABLE}". ${error?.message || "Check the browser console for the Supabase error."}`
         );
       }
     },
