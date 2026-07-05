@@ -4,6 +4,7 @@ import TopBar from "../components/TopBar";
 import { useInventory } from "../context/InventoryContext";
 import { useSettings } from "../context/SettingsContext";
 import { isAdminOrOwner } from "../utils/authRoles";
+import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 
 const UNIT_OPTIONS = [
   { value: "pieces", label: "pieces" },
@@ -111,7 +112,7 @@ const organizedItems = useMemo(() => {
       });
     case "manual":
     default:
-      return items;
+      return items.sort(compareInventoryDisplayOrder);
   }
 }, [filteredItems, settings.lowThresholdMultiplier, settings.criticalThresholdPercent, sortBy]);
 

@@ -4,6 +4,7 @@ import TopBar from "../components/TopBar";
 import { useInventory } from "../context/InventoryContext";
 import { useSales } from "../context/SalesContext";
 import { isAdminOrOwner } from "../utils/authRoles";
+import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 
 const formatCurrency = (value) => `PHP ${Number(value).toFixed(2)}`;
 
@@ -24,36 +25,6 @@ const formatDisplayDate = (dateValue) => {
   });
 };
 
-const SALE_PRICE_RULES = [
-  {
-    name: "Regular Pork Siomai",
-    piecesPerBundle: 3,
-    bundlePrice: 16
-  },
-  {
-    name: "Chicken Siomai",
-    piecesPerBundle: 3,
-    bundlePrice: 16
-  },
-  {
-    name: "Premium Pork Siomai",
-    piecesPerBundle: 3,
-    bundlePrice: 18
-  },
-  {
-    name: "Special Japanese Siomai",
-    piecesPerBundle: 3,
-    bundlePrice: 20
-  }
-];
-
-const PRODUCT_INVENTORY_ALIASES = {
-  "regular pork siomai": "Pork Siomai (Premium)",
-  "premium pork siomai": "Pork Siomai (Premium)",
-  "chicken siomai": "Chicken Siomai",
-  "special japanese siomai": "Japanese Siomai"
-};
-
 const normalizeText = (value) =>
   typeof value === "string" ? value.trim().toLowerCase() : "";
 
@@ -62,12 +33,7 @@ const resolveInventoryItem = (inventory, productName) => {
   if (!normalized) return null;
 
   const directMatch = inventory.find((item) => normalizeText(item.name) === normalized);
-  if (directMatch) return directMatch;
-
-  const aliasName = PRODUCT_INVENTORY_ALIASES[normalized];
-  if (!aliasName) return null;
-
-  return inventory.find((item) => normalizeText(item.name) === normalizeText(aliasName)) || null;
+  return directMatch || null;
 };
 
 const getDefaultRecordForm = () => ({
@@ -88,44 +54,25 @@ export default function SalesHistory({ onLogout, currentUser }) {
   const canManageSalesHistory = isAdminOrOwner(currentUser);
 
   const inventoryProductOptions = useMemo(() => {
-    return inventory.map((item) => ({
-      name: item.name
-    }));
+    return [...inventory]
+      .sort(compareInventoryDisplayOrder)
+      .map((item) => ({
+        name: item.name
+      }));
   }, [inventory]);
 
-  const productSuggestions = useMemo(() => {
-    const merged = new Map();
-
-    [...inventoryProductOptions, ...SALE_PRICE_RULES].forEach((item) => {
-      const key = item.name.trim().toLowerCase();
-      if (!key || merged.has(key)) return;
-      merged.set(key, item);
-    });
-
-    return Array.from(merged.values());
-  }, [inventoryProductOptions]);
-
-  const selectedPricingRule = useMemo(() => {
-    const current = normalizeText(recordForm.product);
-    if (!current) return null;
-    return (
-      SALE_PRICE_RULES.find((item) => item.name.toLowerCase() === current) ||
-      SALE_PRICE_RULES.find((item) => current.includes(item.name.toLowerCase())) ||
-      null
-    );
-  }, [recordForm.product]);
+  const selectedInventoryItem = resolveInventoryItem(inventory, recordForm.product);
 
   const unitPrice = useMemo(() => {
-    const qty = Number(recordForm.qty);
-    if (!Number.isFinite(qty) || qty <= 0 || !selectedPricingRule) return 0;
-    return selectedPricingRule.bundlePrice / selectedPricingRule.piecesPerBundle;
-  }, [recordForm.qty, selectedPricingRule]);
+    if (!selectedInventoryItem) return 0;
+    return Number(selectedInventoryItem.price || 0);
+  }, [selectedInventoryItem]);
 
   const recordTotal = useMemo(() => {
     const qty = Number(recordForm.qty);
-    if (!Number.isFinite(qty) || qty <= 0 || !selectedPricingRule) return 0;
+    if (!Number.isFinite(qty) || qty <= 0 || !selectedInventoryItem) return 0;
     return qty * unitPrice;
-  }, [recordForm.qty, selectedPricingRule, unitPrice]);
+  }, [recordForm.qty, selectedInventoryItem, unitPrice]);
 
   const resetRecordForm = () => {
     setRecordForm(getDefaultRecordForm());
@@ -166,12 +113,8 @@ export default function SalesHistory({ onLogout, currentUser }) {
       setRecordError("Pieces sold must be a valid number.");
       return;
     }
-    if (!selectedPricingRule) {
-      setRecordError("Please choose a product with a preset sale price.");
-      return;
-    }
     if (!selectedInventoryItem) {
-      setRecordError("Please choose a product that exists in inventory.");
+      setRecordError("Please choose an exact product from inventory.");
       return;
     }
     if (selectedInventoryItem.stock < qty) {
@@ -212,13 +155,12 @@ export default function SalesHistory({ onLogout, currentUser }) {
     return salesHistory.filter((sale) => toLocalDateKey(sale.date) === filterDate);
   }, [filterDate, salesHistory]);
 
-  const pricingHint = selectedPricingRule
-    ? `${selectedPricingRule.piecesPerBundle} pcs = PHP ${selectedPricingRule.bundlePrice}`
-    : "Choose a product to auto-calculate the total.";
+  const pricingHint = selectedInventoryItem
+    ? `Matched inventory item: ${selectedInventoryItem.name}`
+    : "Choose an exact product from inventory to auto-calculate the total.";
   const tableGridClass = canManageSalesHistory
     ? "grid-cols-[1.1fr_2fr_0.8fr_1fr_1fr_88px]"
     : "grid-cols-[1.1fr_2fr_0.8fr_1fr_1fr]";
-  const selectedInventoryItem = resolveInventoryItem(inventory, recordForm.product);
 
   return (
     <>
@@ -268,7 +210,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                     type="button"
                     onClick={() => {
                       const confirmed = window.confirm(
-                        "Erase all sales history? This will clear the recorded sales and hide the seeded demo rows."
+                        "Erase all sales history? This will clear the recorded sales from the database and local cache."
                       );
                       if (!confirmed) return;
                       clearRecordedSales();
@@ -379,18 +321,18 @@ export default function SalesHistory({ onLogout, currentUser }) {
                   className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
                 >
                   <option value="">Choose a product</option>
-                  {productSuggestions.map((item) => (
+                  {inventoryProductOptions.map((item) => (
                     <option key={item.name} value={item.name}>
                       {item.name}
                     </option>
                   ))}
                 </select>
                 <p className="mt-2 text-xs text-[#9a8b7d]">{pricingHint}</p>
-                {selectedPricingRule && (
+                {selectedInventoryItem && (
                   <p className="mt-1 text-xs text-[#9a8b7d]">
-                    Matched pricing:{" "}
+                    Matched inventory item:{" "}
                     <span className="font-semibold text-[#2b2018]">
-                      {selectedPricingRule.piecesPerBundle} pieces for PHP {selectedPricingRule.bundlePrice}
+                      {selectedInventoryItem.name}
                     </span>
                   </p>
                 )}
@@ -412,7 +354,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                   <label className="text-sm font-medium text-[#5a4a3f]">Total Amount (PHP)</label>
                   <input
                     type="text"
-                    value={selectedPricingRule ? formatCurrency(recordTotal) : "Select a product"}
+                    value={selectedInventoryItem ? formatCurrency(recordTotal) : "Select a product"}
                     readOnly
                     className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
                   />
@@ -450,11 +392,11 @@ export default function SalesHistory({ onLogout, currentUser }) {
                       <span>Pieces Sold</span>
                       <span className="font-semibold text-[#2b2018]">{recordForm.qty || "0"}</span>
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span>Total Amount</span>
-                      <span className="font-semibold text-[#2b2018]">
-                        {formatCurrency(recordTotal)}
-                      </span>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span>Total Amount</span>
+                    <span className="font-semibold text-[#2b2018]">
+                      {formatCurrency(recordTotal)}
+                    </span>
                     </div>
                     <div className="mt-2 flex items-center justify-between border-t border-[#f0e3d7] pt-2">
                       <span>Unit Price / Piece</span>
@@ -464,7 +406,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                     </div>
                   </div>
                   <p className="mt-3 text-xs text-[#9a8b7d]">
-                    Example: `3 pieces` of `Regular Pork Siomai` becomes `PHP 16.00` total.
+                    The sale is matched only to an exact inventory item name.
                   </p>
                 </div>
               </div>

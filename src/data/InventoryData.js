@@ -12,6 +12,17 @@ export const inventory = [
   },
   {
     id: 2,
+    code: "ITEM-006",
+    name: "Premium Pork Siomai",
+    category: "Finished Goods",
+    stock: 60,
+    unit: "packs",
+    threshold: 120,
+    price: 150,
+    updatedAt: "just now"
+  },
+  {
+    id: 3,
     code: "ITEM-002",
     name: "Chicken Siomai",
     category: "Finished Goods",
@@ -22,7 +33,7 @@ export const inventory = [
     updatedAt: "1 hour ago"
   },
   {
-    id: 3,
+    id: 4,
     code: "ITEM-003",
     name: "Japanese Siomai",
     category: "Finished Goods",
