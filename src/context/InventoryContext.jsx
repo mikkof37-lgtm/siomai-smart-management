@@ -30,6 +30,7 @@ const UNIT_ALIASES = {
 };
 
 const ITEM_NAME_ALIASES = {
+  "pork siomai (premium)": "Regular Pork Siomai",
   "special japanase siomai": "Special Japanese Siomai"
 };
 

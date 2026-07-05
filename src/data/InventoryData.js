@@ -2,7 +2,7 @@ export const inventory = [
   {
     id: 1,
     code: "ITEM-001",
-    name: "Pork Siomai (Premium)",
+    name: "Regular Pork Siomai",
     category: "Finished Goods",
     stock: 45,
     unit: "packs",
