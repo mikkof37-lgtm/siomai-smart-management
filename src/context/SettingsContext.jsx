@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useMemo, useState } from "react";
 
 const defaultSettings = {
@@ -35,4 +36,3 @@ export function useSettings() {
   }
   return ctx;
 }
-

@@ -13,22 +13,9 @@ import { useInventory } from "./InventoryContext";
 
 const SalesContext = createContext(null);
 const STORAGE_KEY = "smart_inventory_sales";
-const SEED_VISIBILITY_KEY = "smart_inventory_sales_show_seed";
-const HIDDEN_SEED_IDS_KEY = "smart_inventory_sales_hidden_seed_ids";
 const SALES_TABLE = import.meta.env.VITE_SUPABASE_SALES_TABLE || "sales_records";
 const hasSupabaseConfig =
   Boolean(import.meta.env.VITE_SUPABASE_URL) && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
-
-const sampleDates = [
-  "Mar 24, 2026",
-  "Mar 23, 2026",
-  "Mar 22, 2026",
-  "Mar 21, 2026",
-  "Mar 20, 2026",
-  "Mar 19, 2026",
-  "Mar 18, 2026",
-  "Mar 17, 2026"
-];
 
 function normalizeSale(sale) {
   if (!sale || typeof sale !== "object") return null;
@@ -53,8 +40,7 @@ function normalizeSale(sale) {
         : typeof sale.inventory_item_name === "string"
         ? sale.inventory_item_name
         : "",
-    inventoryQty:
-      sale.inventoryQty ?? sale.inventory_qty ?? sale.inventoryqty ?? undefined,
+    inventoryQty: sale.inventoryQty ?? sale.inventory_qty ?? sale.inventoryqty ?? undefined,
     createdAt:
       typeof sale.createdAt === "string"
         ? sale.createdAt
@@ -90,7 +76,7 @@ function toSalesRow(sale) {
 }
 
 export function SalesProvider({ children }) {
-  const { inventory, setInventory } = useInventory();
+  const { setInventory } = useInventory();
   const [extraSalesState, setExtraSalesState] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -105,21 +91,6 @@ export function SalesProvider({ children }) {
     }
     return [];
   });
-  const [showSeedSales, setShowSeedSales] = useState(() => {
-    const stored = localStorage.getItem(SEED_VISIBILITY_KEY);
-    return stored === null ? true : stored === "1";
-  });
-  const [hiddenSeedSaleIds, setHiddenSeedSaleIds] = useState(() => {
-    const stored = localStorage.getItem(HIDDEN_SEED_IDS_KEY);
-    if (!stored) return [];
-
-    try {
-      const parsed = JSON.parse(stored);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
   const [isLoadingSales, setIsLoadingSales] = useState(hasSupabaseConfig);
   const [salesSyncError, setSalesSyncError] = useState("");
   const remoteLoadedRef = useRef(false);
@@ -127,14 +98,6 @@ export function SalesProvider({ children }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(extraSalesState));
   }, [extraSalesState]);
-
-  useEffect(() => {
-    localStorage.setItem(SEED_VISIBILITY_KEY, showSeedSales ? "1" : "0");
-  }, [showSeedSales]);
-
-  useEffect(() => {
-    localStorage.setItem(HIDDEN_SEED_IDS_KEY, JSON.stringify(hiddenSeedSaleIds));
-  }, [hiddenSeedSaleIds]);
 
   useEffect(() => {
     let isMounted = true;
@@ -231,25 +194,9 @@ export function SalesProvider({ children }) {
     [syncSales]
   );
 
-  const baseSales = useMemo(() => {
-    return inventory.map((item, index) => {
-      const qty = Math.max(1, (item.stock % 12) + 1);
-      return {
-        id: `seed-${item.id}`,
-        date: sampleDates[index % sampleDates.length],
-        product: item.name,
-        qty,
-        price: Number(item.price || 0)
-      };
-    });
-  }, [inventory]);
-
   const salesHistory = useMemo(() => {
-    const visibleBaseSales = showSeedSales
-      ? baseSales.filter((sale) => !hiddenSeedSaleIds.includes(sale.id))
-      : [];
-    return [...extraSalesState, ...visibleBaseSales];
-  }, [extraSalesState, baseSales, hiddenSeedSaleIds, showSeedSales]);
+    return extraSalesState;
+  }, [extraSalesState]);
 
   const totalRevenue = useMemo(() => {
     return salesHistory.reduce((sum, sale) => {
@@ -310,8 +257,6 @@ export function SalesProvider({ children }) {
       return next;
     });
     setExtraSales([]);
-    setShowSeedSales(false);
-    setHiddenSeedSaleIds([]);
   }, [extraSalesState, setExtraSales, setInventory]);
 
   const deleteSaleRecord = useCallback(
@@ -339,13 +284,6 @@ export function SalesProvider({ children }) {
             })
           );
         }
-      }
-
-      if (typeof saleId === "string" && saleId.startsWith("seed-")) {
-        setHiddenSeedSaleIds((prev) => {
-          if (prev.includes(saleId)) return prev;
-          return [...prev, saleId];
-        });
       }
     },
     [setExtraSales, setInventory]

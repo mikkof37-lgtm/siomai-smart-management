@@ -40,26 +40,22 @@ export default function NotificationBell() {
     localStorage.setItem(READ_ALERTS_STORAGE_KEY, JSON.stringify(readAlerts));
   }, [readAlerts]);
 
-  useEffect(() => {
-    setReadAlerts((prev) => {
-      const next = {};
-      let changed = false;
+  const normalizedReadAlerts = useMemo(() => {
+    const next = {};
 
-      Object.keys(prev).forEach((id) => {
-        if (lowStockAlertKeysById[id]) {
-          next[id] = prev[id];
-        } else {
-          changed = true;
-        }
-      });
-
-      return changed ? next : prev;
+    Object.keys(readAlerts).forEach((id) => {
+      if (lowStockAlertKeysById[id]) {
+        next[id] = readAlerts[id];
+      }
     });
-  }, [lowStockAlertKeysById]);
+
+    return next;
+  }, [lowStockAlertKeysById, readAlerts]);
 
   const unreadCount = lowStockItems.filter((item) => {
-    return readAlerts[item.id] !== lowStockAlertKeysById[item.id];
+    return normalizedReadAlerts[item.id] !== lowStockAlertKeysById[item.id];
   }).length;
+  const notificationCount = lowStockItems.length;
 
   const markAsRead = (item) => {
     setReadAlerts((prev) => ({
@@ -87,9 +83,9 @@ export default function NotificationBell() {
             strokeLinejoin="round"
           />
         </svg>
-        {unreadCount > 0 && (
+        {notificationCount > 0 && (
           <span className="absolute -right-1 -top-1 min-w-[20px] rounded-full bg-[#ff6a5a] px-1.5 py-0.5 text-[10px] font-semibold text-white">
-            {unreadCount > 9 ? "9+" : unreadCount}
+            {notificationCount > 9 ? "9+" : notificationCount}
           </span>
         )}
       </button>
