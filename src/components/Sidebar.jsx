@@ -55,7 +55,7 @@ const navItems = [
     )
   },
   {
-    label: "AI Restocking",
+    label: "Restock Orders",
     to: "/restock",
     icon: (
       <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
@@ -66,7 +66,7 @@ const navItems = [
           strokeLinecap="round"
         />
         <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
-        </svg>
+      </svg>
     )
   },
   {

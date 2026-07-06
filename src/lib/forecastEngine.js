@@ -146,9 +146,10 @@ export function buildForecastContext({ salesHistory, inventory, horizonDays }) {
     return latest;
   }, null);
 
-  const anchorDate = startOfDay(latestSaleDate || new Date());
+  const historyAnchorDate = startOfDay(latestSaleDate || new Date());
+  const forecastStartDate = latestSaleDate ? addDays(historyAnchorDate, 1) : startOfDay(new Date());
   const windowDays = 30;
-  const windowStart = addDays(anchorDate, -(windowDays - 1));
+  const windowStart = addDays(historyAnchorDate, -(windowDays - 1));
   const dailySeries = [];
 
   for (let index = 0; index < windowDays; index += 1) {
@@ -217,7 +218,9 @@ export function buildForecastContext({ salesHistory, inventory, horizonDays }) {
     recent7,
     prior7,
     trendPct,
-    anchorDate: toIsoDate(anchorDate),
+    anchorDate: toIsoDate(historyAnchorDate),
+    forecastStartDate: toIsoDate(forecastStartDate),
+    latestSaleDate: latestSaleDate ? toIsoDate(latestSaleDate) : null,
     dailySeries,
     itemSales,
     lowStockItems,
@@ -229,9 +232,10 @@ function buildDemandSeries(context, horizonDays, multiplier, confidence) {
   const series = [];
   const baseDaily = context.dailyAverage > 0 ? context.dailyAverage : context.lowStockItems.length > 0 ? 1.5 : 0;
   const weekdayBoost = [0.94, 0.98, 1, 1.02, 1.06, 1.1, 0.9];
+  const startDate = safeDate(context.forecastStartDate) || new Date();
 
   for (let offset = 1; offset <= horizonDays; offset += 1) {
-    const date = addDays(new Date(context.generatedAt), offset);
+    const date = addDays(startDate, offset - 1);
     const seasonalBoost = weekdayBoost[date.getDay()] || 1;
     const drift = 1 + Math.min(0.12, Math.max(-0.12, context.trendPct * (offset / Math.max(horizonDays, 1)) * 0.35));
     const predictedUnits = Math.max(0, Math.round(baseDaily * multiplier * seasonalBoost * drift));
@@ -334,6 +338,9 @@ function buildNarrative(context, horizonDays, demandSeries, recommendations, con
     notes: [
       `Forecast window: ${horizonDays} days.`,
       `Analysis window: ${context.dailySeries.length} days of sales history.`,
+      context.latestSaleDate
+        ? `Forecast starts after the latest sales record on ${context.latestSaleDate}.`
+        : "This forecast starts from today because no valid sales date was found.",
       "This forecast uses recent sales and inventory levels."
     ]
   };

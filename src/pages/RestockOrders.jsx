@@ -34,14 +34,15 @@ export default function RestockOrders({ onLogout }) {
   return (
     <div className="flex min-h-screen bg-[#fbf8f4]">
       <Sidebar onLogout={onLogout} />
-      <div className="flex-1">
-        <TopBar title="Restock Orders" subtitle="Review what needs ordering next." />
+        <div className="flex-1">
+        <TopBar title="Restock Orders" subtitle="Rule-based list of items that need to be ordered." />
         <div className="px-8 pb-10 pt-6">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold text-[#2b2018] mb-2">Restock Orders</h1>
               <p className="text-sm text-[#8c7b6d]">
-                Rule-based suggestions using your current stock, thresholds, and max stock limits.
+                Use this page when you need to decide what to buy right now.
+                Suggestions are based on current stock, thresholds, and max stock limits.
               </p>
             </div>
           </div>

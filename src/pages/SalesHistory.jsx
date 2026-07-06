@@ -63,6 +63,8 @@ const getDefaultRecordForm = () => ({
   notes: ""
 });
 
+const SALES_PAGE_SIZE = 12;
+
 export default function SalesHistory({ onLogout, currentUser }) {
   const { inventory } = useInventory();
   const { salesHistory, addSale, clearRecordedSales, deleteSaleRecord } = useSales();
@@ -70,6 +72,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
   const [filterDate, setFilterDate] = useState("");
   const [recordError, setRecordError] = useState("");
   const [recordForm, setRecordForm] = useState(getDefaultRecordForm);
+  const [currentPage, setCurrentPage] = useState(1);
   const canManageSalesHistory = isAdminOrOwner(currentUser);
 
   const inventoryProductOptions = useMemo(() => {
@@ -173,6 +176,14 @@ export default function SalesHistory({ onLogout, currentUser }) {
     return salesHistory.filter((sale) => toLocalDateKey(sale.date) === filterDate);
   }, [filterDate, salesHistory]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredSales.length / SALES_PAGE_SIZE));
+  const activePage = Math.min(currentPage, totalPages);
+
+  const paginatedSales = useMemo(() => {
+    const startIndex = (activePage - 1) * SALES_PAGE_SIZE;
+    return filteredSales.slice(startIndex, startIndex + SALES_PAGE_SIZE);
+  }, [activePage, filteredSales]);
+
   const pricingHint = selectedInventoryItem
     ? SIOMAI_BUNDLE_PRICING.has(normalizeText(selectedInventoryItem.name))
       ? (() => {
@@ -207,13 +218,19 @@ export default function SalesHistory({ onLogout, currentUser }) {
                   <input
                     type="date"
                     value={filterDate}
-                    onChange={(e) => setFilterDate(e.target.value)}
+                    onChange={(e) => {
+                      setFilterDate(e.target.value);
+                      setCurrentPage(1);
+                    }}
                     className="rounded-lg border border-[#efe5db] bg-white px-2 py-1 text-xs text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
                   />
                   {filterDate && (
                     <button
                       type="button"
-                      onClick={() => setFilterDate("")}
+                      onClick={() => {
+                        setFilterDate("");
+                        setCurrentPage(1);
+                      }}
                       className="text-xs font-semibold text-[#ff7a1a] hover:text-[#ff6a00]"
                     >
                       Clear
@@ -247,6 +264,38 @@ export default function SalesHistory({ onLogout, currentUser }) {
             </div>
 
             <div className="rounded-2xl border border-[#efe6dc] bg-white shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f2eae0] px-6 py-3">
+                <p className="text-xs font-semibold text-[#9a8b7d]">
+                  Showing {filteredSales.length === 0 ? 0 : (activePage - 1) * SALES_PAGE_SIZE + 1}
+                  {" "}
+                  -{" "}
+                  {Math.min(activePage * SALES_PAGE_SIZE, filteredSales.length)}
+                  {" "}
+                  of {filteredSales.length} records
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={activePage === 1}
+                    className="rounded-full border border-[#efc9b4] bg-white px-4 py-2 text-xs font-semibold text-[#c35f18] transition hover:border-[#ffb47b] hover:text-[#ff6a00] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+                  <span className="rounded-full bg-[#fffaf5] px-4 py-2 text-xs font-semibold text-[#7f6d60]">
+                    Page {activePage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    disabled={activePage === totalPages}
+                    className="rounded-full border border-[#efc9b4] bg-white px-4 py-2 text-xs font-semibold text-[#c35f18] transition hover:border-[#ffb47b] hover:text-[#ff6a00] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+
               <div
                 className={`grid ${tableGridClass} border-b border-[#f2eae0] px-6 py-3 text-xs font-semibold text-[#9a8b7d]`}
               >
@@ -259,7 +308,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
               </div>
 
               <div className="divide-y divide-[#f4ede4]">
-                {filteredSales.map((sale) => {
+                {paginatedSales.map((sale) => {
                   const total = sale.qty * sale.price;
                   return (
                     <div
