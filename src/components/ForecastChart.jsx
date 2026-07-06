@@ -20,15 +20,24 @@ export default function ForecastChart() {
       const parsedDate = new Date(sale.date);
       if (Number.isNaN(parsedDate.getTime())) return;
 
-      const key = parsedDate.toLocaleDateString("en-US", {
+      const dateKey = [
+        parsedDate.getFullYear(),
+        String(parsedDate.getMonth() + 1).padStart(2, "0"),
+        String(parsedDate.getDate()).padStart(2, "0")
+      ].join("-");
+      const label = parsedDate.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric"
       });
       const revenue = (Number(sale.qty) || 0) * (Number(sale.price) || 0);
-      grouped.set(key, (grouped.get(key) || 0) + revenue);
+      grouped.set(dateKey, {
+        date: label,
+        timestamp: parsedDate.getTime(),
+        value: (grouped.get(dateKey)?.value || 0) + revenue
+      });
     });
 
-    return Array.from(grouped.entries()).map(([date, value]) => ({ date, value }));
+    return Array.from(grouped.values()).sort((left, right) => left.timestamp - right.timestamp);
   }, [salesHistory]);
 
   return (
