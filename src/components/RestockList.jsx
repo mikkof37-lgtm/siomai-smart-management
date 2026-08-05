@@ -1,5 +1,6 @@
 import { useInventory } from "../context/InventoryContext";
 import { useSettings } from "../context/SettingsContext";
+import { formatInventoryQuantityForDisplay } from "../utils/siomaiUnits";
 
 export default function RestockList() {
 
@@ -54,10 +55,12 @@ return (
             <div>
               <p className="text-sm font-semibold text-[#2b2018]">{item.name}</p>
               <p className="text-xs text-[#9a8b7d]">
-                Current: {item.stock} {item.unit || "units"} · Threshold: {item.threshold}
+                Current: {formatInventoryQuantityForDisplay(item, item.stock, item.unit || "units")} ·
+                Threshold: {formatInventoryQuantityForDisplay(item, item.threshold, item.unit || "units")}
               </p>
               <p className="mt-1 text-xs font-semibold text-[#c06b1d]">
-                Suggested order: {item.suggestedOrder} {item.unit || "units"}
+                Suggested order:{" "}
+                {formatInventoryQuantityForDisplay(item, item.suggestedOrder, item.unit || "units")}
               </p>
             </div>
             <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${badgeClass}`}>

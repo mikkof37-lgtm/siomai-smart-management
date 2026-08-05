@@ -7,7 +7,7 @@ import { useInventory } from "../context/InventoryContext"
 import { useSettings } from "../context/SettingsContext"
 import { useSales } from "../context/SalesContext"
 
-export default function Dashboard({ onLogout }){
+export default function Dashboard({ onLogout, currentUser }){
 
 const { inventory } = useInventory();
 const { settings } = useSettings();
@@ -21,15 +21,17 @@ const restockSuggestions = lowStockCount;
 
 return(
 
-<div className="flex min-h-screen bg-[#fbf8f4]">
+<div className="flex min-h-screen bg-[var(--app-bg)]">
 
-<Sidebar onLogout={onLogout}/>
+<Sidebar currentUser={currentUser} />
 
 <div className="flex-1">
 
 <TopBar
   title="Dashboard"
   subtitle="Welcome back. Here's what's happening today."
+  onLogout={onLogout}
+  currentUser={currentUser}
 />
 
 <div className="px-8 pb-10 pt-6">

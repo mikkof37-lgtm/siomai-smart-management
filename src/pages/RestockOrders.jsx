@@ -2,6 +2,7 @@ import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import { useInventory } from "../context/InventoryContext";
 import { useSettings } from "../context/SettingsContext";
+import { formatInventoryQuantityForDisplay } from "../utils/siomaiUnits";
 
 const getRestockData = (item, settings) => {
   const isCritical = item.stock < item.threshold * settings.criticalThresholdPercent;
@@ -21,7 +22,7 @@ const getRestockData = (item, settings) => {
   };
 };
 
-export default function RestockOrders({ onLogout }) {
+export default function RestockOrders({ onLogout, currentUser }) {
   const { inventory } = useInventory();
   const { settings } = useSettings();
 
@@ -32,10 +33,15 @@ export default function RestockOrders({ onLogout }) {
   const totalSuggested = attentionItems.reduce((sum, item) => sum + item.suggestedOrder, 0);
 
   return (
-    <div className="flex min-h-screen bg-[#fbf8f4]">
-      <Sidebar onLogout={onLogout} />
+    <div className="flex min-h-screen bg-[var(--app-bg)]">
+      <Sidebar currentUser={currentUser} />
         <div className="flex-1">
-        <TopBar title="Restock Orders" subtitle="Rule-based list of items that need to be ordered." />
+        <TopBar
+          title="Restock Orders"
+          subtitle="Rule-based list of items that need to be ordered."
+          onLogout={onLogout}
+          currentUser={currentUser}
+        />
         <div className="px-8 pb-10 pt-6">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -95,10 +101,10 @@ export default function RestockOrders({ onLogout }) {
                       </p>
                     </div>
                     <div className="text-center font-semibold text-[#2b2018]">
-                      {item.stock} {item.unit || "units"}
+                      {formatInventoryQuantityForDisplay(item, item.stock, item.unit || "units")}
                     </div>
                     <div className="text-center font-semibold text-[#c06b1d]">
-                      {item.suggestedOrder} {item.unit || "units"}
+                      {formatInventoryQuantityForDisplay(item, item.suggestedOrder, item.unit || "units")}
                     </div>
                     <div className="text-center">
                       <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${priorityClass}`}>

@@ -1,21 +1,29 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useMemo, useState } from "react";
-
-const defaultSettings = {
-  lowThresholdMultiplier: 1,
-  criticalThresholdPercent: 0.5,
-  notifyLow: true,
-  notifyCritical: true,
-  alertFrequency: "instant"
-};
+import {
+  defaultSettings,
+  loadStoredSettings,
+  normalizeSettings,
+  resetStoredSettings,
+  saveStoredSettings
+} from "../utils/settings";
 
 const SettingsContext = createContext(null);
 
 export function SettingsProvider({ children }) {
-  const [settings, setSettings] = useState(defaultSettings);
+  const [settings, setSettingsState] = useState(() => loadStoredSettings());
+
+  const setSettings = (value) => {
+    setSettingsState((current) => {
+      const next = normalizeSettings(typeof value === "function" ? value(current) : value);
+      saveStoredSettings(next);
+      return next;
+    });
+  };
 
   const resetSettings = () => {
-    setSettings(defaultSettings);
+    resetStoredSettings();
+    setSettingsState(defaultSettings);
   };
 
   const value = useMemo(() => {

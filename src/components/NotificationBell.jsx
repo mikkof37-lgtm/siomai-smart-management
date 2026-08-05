@@ -55,7 +55,6 @@ export default function NotificationBell() {
   const unreadCount = lowStockItems.filter((item) => {
     return normalizedReadAlerts[item.id] !== lowStockAlertKeysById[item.id];
   }).length;
-  const notificationCount = lowStockItems.length;
 
   const markAsRead = (item) => {
     setReadAlerts((prev) => ({
@@ -64,11 +63,27 @@ export default function NotificationBell() {
     }));
   };
 
+  const toggleOpen = () => {
+    setOpen((prev) => {
+      const nextOpen = !prev;
+      if (nextOpen && lowStockItems.length > 0) {
+        setReadAlerts((current) => {
+          const next = { ...current };
+          lowStockItems.forEach((item) => {
+            next[item.id] = lowStockAlertKeysById[item.id];
+          });
+          return next;
+        });
+      }
+      return nextOpen;
+    });
+  };
+
   return (
-    <div className="relative">
+    <div className="relative z-50">
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={toggleOpen}
         className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#efe5db] bg-white text-[#7f6d60] shadow-sm transition hover:text-[#ff7a1a]"
         aria-label="Low stock notifications"
         aria-expanded={open}
@@ -83,15 +98,15 @@ export default function NotificationBell() {
             strokeLinejoin="round"
           />
         </svg>
-        {notificationCount > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute -right-1 -top-1 min-w-[20px] rounded-full bg-[#ff6a5a] px-1.5 py-0.5 text-[10px] font-semibold text-white">
-            {notificationCount > 9 ? "9+" : notificationCount}
+            {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-3 w-[calc(100vw-2rem)] max-w-72 overflow-hidden rounded-2xl border border-[#efe6dc] bg-white shadow-[0_18px_50px_-24px_rgba(58,41,29,0.6)]">
+        <div className="absolute right-0 top-full z-50 mt-3 w-[calc(100vw-2rem)] max-w-72 overflow-hidden rounded-2xl border border-[#efe6dc] bg-white shadow-[0_18px_50px_-24px_rgba(58,41,29,0.6)]">
           <div className="flex items-center justify-between border-b border-[#f2eae0] px-4 py-3">
             <div className="text-sm font-semibold text-[#2b2018]">
               Low Stock Alerts

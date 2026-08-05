@@ -29,7 +29,7 @@ function formatDateLabel(value) {
   });
 }
 
-export default function DemandForecast({ onLogout }) {
+export default function DemandForecast({ onLogout, currentUser }) {
   const { inventory } = useInventory();
   const { salesHistory } = useSales();
   const [horizonDays, setHorizonDays] = useState(14);
@@ -94,8 +94,7 @@ export default function DemandForecast({ onLogout }) {
         const fallback = await generateForecast({
           horizonDays,
           salesHistory,
-          inventory,
-          apiKey: null
+          inventory
         });
         setForecast(fallback);
         setError("");
@@ -108,12 +107,14 @@ export default function DemandForecast({ onLogout }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#fbf8f4]">
-      <Sidebar onLogout={onLogout} />
+    <div className="flex min-h-screen bg-[var(--app-bg)]">
+      <Sidebar currentUser={currentUser} />
       <div className="flex-1">
         <TopBar
           title="Demand Forecast"
           subtitle="A simple forecast page that looks at recent sales and gives a basic trend estimate."
+          onLogout={onLogout}
+          currentUser={currentUser}
         />
 
         <div className="px-8 pb-10 pt-6">

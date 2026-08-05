@@ -3,4 +3,32 @@
 
 :root {
   font-family: "Manrope", "Segoe UI", sans-serif;
+  --app-bg: #fbf8f4;
+  --app-text: #2b2018;
+  --surface-bg: rgba(255, 255, 255, 0.94);
+  --surface-border: #efe6dc;
+  --surface-muted: #8c7b6d;
+  --sidebar-bg: #221813;
+  --sidebar-border: #2f2119;
+  --sidebar-text: #f7f1ea;
+  --sidebar-muted: #d1c3b6;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --app-bg: #120d0b;
+  --app-text: #f5ece3;
+  --surface-bg: rgba(34, 24, 19, 0.94);
+  --surface-border: #443329;
+  --surface-muted: #b59e8d;
+  --sidebar-bg: #1c130f;
+  --sidebar-border: #34241c;
+  --sidebar-text: #f7f1ea;
+  --sidebar-muted: #c8b5a8;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--app-bg);
+  color: var(--app-text);
 }

@@ -1,10 +1,16 @@
 import { useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
+import { BRANCH_OPTIONS } from "../data/branches";
 import { useInventory } from "../context/InventoryContext";
 import { useSales } from "../context/SalesContext";
 import { isAdminOrOwner } from "../utils/authRoles";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
+import {
+  formatInventoryQuantityForDisplay,
+  getSaleInventoryQuantity,
+  getSaleQuantityUnitLabel
+} from "../utils/siomaiUnits";
 
 const formatCurrency = (value) => `PHP ${Number(value).toFixed(2)}`;
 
@@ -56,6 +62,7 @@ const getSaleUnitPrice = (inventoryItem) => {
 };
 
 const getDefaultRecordForm = () => ({
+  branch: "",
   product: "",
   qty: "1",
   price: "0",
@@ -70,6 +77,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
   const { salesHistory, addSale, clearRecordedSales, deleteSaleRecord } = useSales();
   const [showRecord, setShowRecord] = useState(false);
   const [filterDate, setFilterDate] = useState("");
+  const [filterBranch, setFilterBranch] = useState("");
   const [recordError, setRecordError] = useState("");
   const [recordForm, setRecordForm] = useState(getDefaultRecordForm);
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,22 +118,25 @@ export default function SalesHistory({ onLogout, currentUser }) {
   };
 
   const handleProductChange = (value) => {
-    setRecordForm((prev) => {
-      return {
-        ...prev,
-        product: value
-      };
-    });
+    setRecordForm((prev) => ({
+      ...prev,
+      product: value
+    }));
   };
 
   const handleRecordSale = (e) => {
     e.preventDefault();
     setRecordError("");
 
+    const branch = recordForm.branch.trim();
     const product = recordForm.product.trim();
     const qty = Number(recordForm.qty);
     const dateValue = recordForm.date;
 
+    if (!branch) {
+      setRecordError("Branch is required.");
+      return;
+    }
     if (!product) {
       setRecordError("Product name is required.");
       return;
@@ -138,9 +149,14 @@ export default function SalesHistory({ onLogout, currentUser }) {
       setRecordError("Please choose an exact product from inventory.");
       return;
     }
-    if (selectedInventoryItem.stock < qty) {
+    const inventoryQty = getSaleInventoryQuantity(selectedInventoryItem, qty);
+    if (inventoryQty > Number(selectedInventoryItem.stock || 0)) {
       setRecordError(
-        `Not enough stock for ${selectedInventoryItem.name}. Available: ${selectedInventoryItem.stock}.`
+        `Not enough stock for ${selectedInventoryItem.name}. Available: ${formatInventoryQuantityForDisplay(
+          selectedInventoryItem,
+          selectedInventoryItem.stock,
+          selectedInventoryItem.unit || "units"
+        )}.`
       );
       return;
     }
@@ -151,13 +167,14 @@ export default function SalesHistory({ onLogout, currentUser }) {
 
     addSale({
       date: formattedDate,
+      branch,
       product,
       qty,
       price: unitPrice,
       notes: recordForm.notes.trim(),
       inventoryItemId: selectedInventoryItem.id,
       inventoryItemName: selectedInventoryItem.name,
-      inventoryQty: qty
+      inventoryQty
     });
 
     resetRecordForm();
@@ -172,9 +189,13 @@ export default function SalesHistory({ onLogout, currentUser }) {
   };
 
   const filteredSales = useMemo(() => {
-    if (!filterDate) return salesHistory;
-    return salesHistory.filter((sale) => toLocalDateKey(sale.date) === filterDate);
-  }, [filterDate, salesHistory]);
+    return salesHistory.filter((sale) => {
+      const matchesDate = !filterDate || toLocalDateKey(sale.date) === filterDate;
+      const saleBranch = typeof sale.branch === "string" ? sale.branch.trim() : "";
+      const matchesBranch = !filterBranch || saleBranch === filterBranch;
+      return matchesDate && matchesBranch;
+    });
+  }, [filterBranch, filterDate, salesHistory]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSales.length / SALES_PAGE_SIZE));
   const activePage = Math.min(currentPage, totalPages);
@@ -193,16 +214,16 @@ export default function SalesHistory({ onLogout, currentUser }) {
       : `Matched inventory item: ${selectedInventoryItem.name}`
     : "Choose an exact product from inventory to auto-calculate the total.";
   const tableGridClass = canManageSalesHistory
-    ? "grid-cols-[1.1fr_2fr_0.8fr_1fr_1fr_88px]"
-    : "grid-cols-[1.1fr_2fr_0.8fr_1fr_1fr]";
+    ? "grid-cols-[1fr_1fr_2fr_0.8fr_1fr_1fr_88px]"
+    : "grid-cols-[1fr_1fr_2fr_0.8fr_1fr_1fr]";
 
   return (
     <>
-      <div className="flex min-h-screen bg-[#fbf8f4]">
-        <Sidebar onLogout={onLogout} />
+      <div className="flex min-h-screen bg-[var(--app-bg)]">
+        <Sidebar currentUser={currentUser} />
 
         <div className="flex-1">
-          <TopBar />
+          <TopBar onLogout={onLogout} currentUser={currentUser} />
 
           <div className="px-8 pb-10 pt-6">
             <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -237,6 +258,38 @@ export default function SalesHistory({ onLogout, currentUser }) {
                     </button>
                   )}
                 </div>
+
+                <div className="flex items-center gap-2 rounded-full border border-[#efe6dc] bg-white px-4 py-2 text-sm text-[#6f5f52] shadow-sm">
+                  <label className="text-xs font-semibold text-[#9a8b7d]">Branch</label>
+                  <select
+                    value={filterBranch}
+                    onChange={(e) => {
+                      setFilterBranch(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="rounded-lg border border-[#efe5db] bg-white px-2 py-1 text-xs text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
+                  >
+                    <option value="">All branches</option>
+                    {BRANCH_OPTIONS.map((branch) => (
+                      <option key={branch.value} value={branch.value}>
+                        {branch.label}
+                      </option>
+                    ))}
+                  </select>
+                  {filterBranch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFilterBranch("");
+                        setCurrentPage(1);
+                      }}
+                      className="text-xs font-semibold text-[#ff7a1a] hover:text-[#ff6a00]"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={openRecordModal}
@@ -266,12 +319,9 @@ export default function SalesHistory({ onLogout, currentUser }) {
             <div className="rounded-2xl border border-[#efe6dc] bg-white shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f2eae0] px-6 py-3">
                 <p className="text-xs font-semibold text-[#9a8b7d]">
-                  Showing {filteredSales.length === 0 ? 0 : (activePage - 1) * SALES_PAGE_SIZE + 1}
-                  {" "}
-                  -{" "}
-                  {Math.min(activePage * SALES_PAGE_SIZE, filteredSales.length)}
-                  {" "}
-                  of {filteredSales.length} records
+                  Showing {filteredSales.length === 0 ? 0 : (activePage - 1) * SALES_PAGE_SIZE + 1}{" "}
+                  - {Math.min(activePage * SALES_PAGE_SIZE, filteredSales.length)} of{" "}
+                  {filteredSales.length} records
                 </p>
                 <div className="flex items-center gap-2">
                   <button
@@ -300,6 +350,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                 className={`grid ${tableGridClass} border-b border-[#f2eae0] px-6 py-3 text-xs font-semibold text-[#9a8b7d]`}
               >
                 <div>Date</div>
+                <div>Branch</div>
                 <div>Product Name</div>
                 <div className="text-center">Quantity</div>
                 <div className="text-right">Unit Price</div>
@@ -316,6 +367,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                       className={`grid ${tableGridClass} items-center px-6 py-3 text-sm`}
                     >
                       <div className="text-[#8c7b6d]">{sale.date}</div>
+                      <div className="text-[#2b2018]">{sale.branch || "Unassigned"}</div>
                       <div className="font-semibold text-[#2b2018]">{sale.product}</div>
                       <div className="text-center font-semibold text-[#2b2018]">{sale.qty}</div>
                       <div className="text-right text-[#8c7b6d]">{formatCurrency(sale.price)}</div>
@@ -345,7 +397,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                 })}
                 {filteredSales.length === 0 && (
                   <div className="px-6 py-6 text-center text-sm text-[#9a8b7d]">
-                    No sales found for the selected date.
+                    No sales found for the selected date or branch.
                   </div>
                 )}
               </div>
@@ -380,11 +432,27 @@ export default function SalesHistory({ onLogout, currentUser }) {
             </div>
 
             <div className="mt-4 rounded-2xl border border-[#f2eae0] bg-[#fffaf5] px-4 py-3 text-sm text-[#7f6d60]">
-              Enter how many pieces were sold and choose the product. The app will calculate the total
-              amount and unit price for you.
+              Enter the branch, product, and quantity. The app will calculate the total amount and
+              unit price for you.
             </div>
 
             <form onSubmit={handleRecordSale} className="mt-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-[#5a4a3f]">Branch</label>
+                <select
+                  value={recordForm.branch}
+                  onChange={(e) => setRecordForm((prev) => ({ ...prev, branch: e.target.value }))}
+                  className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
+                >
+                  <option value="">Choose a branch</option>
+                  {BRANCH_OPTIONS.map((branch) => (
+                    <option key={branch.value} value={branch.value}>
+                      {branch.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="text-sm font-medium text-[#5a4a3f]">Product Name</label>
                 <select
@@ -413,6 +481,11 @@ export default function SalesHistory({ onLogout, currentUser }) {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                   <label className="text-sm font-medium text-[#5a4a3f]">Pieces Sold</label>
+                  <p className="mt-1 text-xs text-[#9a8b7d]">
+                    {selectedInventoryItem && getSaleQuantityUnitLabel(selectedInventoryItem) === "pcs"
+                      ? "Siomai is sold in pcs"
+                      : "Enter the sold quantity"}
+                  </p>
                   <input
                     type="number"
                     min="1"
@@ -461,14 +534,20 @@ export default function SalesHistory({ onLogout, currentUser }) {
                   </div>
                   <div className="mt-2 text-sm text-[#7f6d60]">
                     <div className="flex items-center justify-between">
+                      <span>Branch</span>
+                      <span className="font-semibold text-[#2b2018]">
+                        {recordForm.branch || "Select a branch"}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
                       <span>Pieces Sold</span>
                       <span className="font-semibold text-[#2b2018]">{recordForm.qty || "0"}</span>
                     </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span>Total Amount</span>
-                    <span className="font-semibold text-[#2b2018]">
-                      {formatCurrency(recordTotal)}
-                    </span>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span>Total Amount</span>
+                      <span className="font-semibold text-[#2b2018]">
+                        {formatCurrency(recordTotal)}
+                      </span>
                     </div>
                     <div className="mt-2 flex items-center justify-between border-t border-[#f0e3d7] pt-2">
                       <span>Unit Price / Piece</span>

@@ -18,7 +18,7 @@ export const inventory = [
     stock: 60,
     unit: "packs",
     threshold: 120,
-    price: 150,
+    price: 2950,
     updatedAt: "just now"
   },
   {

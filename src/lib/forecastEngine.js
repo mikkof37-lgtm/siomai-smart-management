@@ -1,6 +1,6 @@
-const DEFAULT_MODEL = "gpt-5.5";
 const HORIZON_OPTIONS = [7, 14, 30];
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_SERVICE_TIMEOUT_MS = 8000;
 
 function toNumber(value, fallback = 0) {
   const parsed = Number(value);
@@ -434,132 +434,144 @@ function buildHeuristicPayload(context) {
   };
 }
 
-function buildOpenAiMessages(context) {
-  const snapshot = {
-    horizonDays: context.horizonDays,
-    salesCount: context.salesCount,
-    inventoryCount: context.inventoryCount,
-    totalUnits: context.totalUnits,
-    totalRevenue: Math.round(context.totalRevenue),
-    recent7: context.recent7,
-    prior7: context.prior7,
-    trendPct: Number(context.trendPct.toFixed(4)),
-    lowStockItems: context.lowStockItems,
-    topItems: context.itemSales,
-    dailySeries: context.dailySeries
-  };
-
-  return [
-    {
-      role: "system",
-      content:
-        "You are a demand planning assistant for a small restaurant inventory dashboard. Use the provided sales and inventory snapshot to produce a conservative forecast. Do not invent items. Return only valid JSON that matches the schema."
-    },
-    {
-      role: "user",
-      content: JSON.stringify(snapshot)
-    }
-  ];
+function normalizeServiceUrl(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : "";
 }
 
-function buildResponseFormat() {
-  return {
-    type: "json_schema",
-    json_schema: {
-      name: "forecast_response",
-      strict: true,
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          summary: { type: "string" },
-          confidence: { type: "number" },
-          demandSeries: {
-            type: "array",
-            items: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                date: { type: "string" },
-                predictedUnits: { type: "number" },
-                confidence: { type: "number" }
-              },
-              required: ["date", "predictedUnits", "confidence"]
-            }
-          },
-          recommendations: {
-            type: "array",
-            items: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                itemName: { type: "string" },
-                currentStock: { type: "number" },
-                predictedDemand: { type: "number" },
-                recommendedOrderQty: { type: "number" },
-                reason: { type: "string" }
-              },
-              required: ["itemName", "currentStock", "predictedDemand", "recommendedOrderQty", "reason"]
-            }
-          },
-          risks: {
-            type: "array",
-            items: { type: "string" }
-          },
-          notes: {
-            type: "array",
-            items: { type: "string" }
-          }
-        },
-        required: ["summary", "confidence", "demandSeries", "recommendations", "risks", "notes"]
-      }
+async function requestJson(url, payload, timeoutMs = DEFAULT_SERVICE_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(new Error("Request timed out.")), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    const text = await response.text();
+    const parsed = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+      const detail = parsed?.detail || parsed?.error || text || `HTTP ${response.status}`;
+      throw new Error(`Service request failed (${response.status}): ${detail}`);
     }
-  };
+
+    return parsed;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
-export async function generateForecast({ salesHistory, inventory, horizonDays, apiKey, model = DEFAULT_MODEL }) {
-  const context = buildForecastContext({ salesHistory, inventory, horizonDays });
-
-  if (!apiKey) {
-    return buildHeuristicPayload(context);
+async function maybeEnhanceSummary(summaryServiceUrl, context, forecast) {
+  const normalizedUrl = normalizeServiceUrl(summaryServiceUrl);
+  if (!normalizedUrl) {
+    return forecast;
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
+    const payload = await requestJson(normalizedUrl, {
+      context: {
+        horizonDays: context.horizonDays,
+        salesCount: context.salesCount,
+        inventoryCount: context.inventoryCount,
+        totalUnits: context.totalUnits,
+        totalRevenue: Math.round(context.totalRevenue),
+        recent7: context.recent7,
+        prior7: context.prior7,
+        trendPct: Number(context.trendPct.toFixed(4)),
+        lowStockItems: context.lowStockItems,
+        topItems: context.itemSales,
+        dailySeries: context.dailySeries
       },
-      body: JSON.stringify({
-        model,
-        messages: buildOpenAiMessages(context),
-        response_format: buildResponseFormat(),
-        temperature: 0.2
-      })
+      forecast: {
+        source: forecast.source,
+        model: forecast.model,
+        horizonDays: forecast.horizonDays,
+        confidence: forecast.confidence,
+        demandSeries: forecast.demandSeries,
+        recommendations: forecast.recommendations
+      }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`OpenAI request failed (${response.status}): ${errorText}`);
-    }
+    const summary = normalizeLabel(payload?.summary);
+    const risks = Array.isArray(payload?.risks) ? payload.risks.map(normalizeLabel).filter(Boolean) : [];
+    const notes = Array.isArray(payload?.notes) ? payload.notes.map(normalizeLabel).filter(Boolean) : [];
 
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("OpenAI returned an empty completion.");
-    }
-
-    const parsed = JSON.parse(content);
-    return normalizeForecastOutput(parsed, context, "openai", data?.model || model);
-  } catch (error) {
-    const fallback = buildHeuristicPayload(context);
     return {
-      ...fallback,
-      notes: [...fallback.notes, `OpenAI fallback triggered: ${error?.message || "Unknown error"}`]
+      ...forecast,
+      summary: summary || forecast.summary,
+      risks: risks.length > 0 ? risks : forecast.risks,
+      notes: notes.length > 0 ? notes : forecast.notes
+    };
+  } catch (error) {
+    return {
+      ...forecast,
+      notes: [...forecast.notes, `Summary service fallback triggered: ${error?.message || "Unknown error"}`]
     };
   }
 }
 
-export { DEFAULT_MODEL as FORECAST_DEFAULT_MODEL, HORIZON_OPTIONS as FORECAST_HORIZON_OPTIONS };
+async function requestStatsForecast(statsServiceUrl, context) {
+  const normalizedUrl = normalizeServiceUrl(statsServiceUrl);
+  if (!normalizedUrl) {
+    return null;
+  }
+
+  const payload = await requestJson(normalizedUrl, {
+    horizonDays: context.horizonDays,
+    generatedAt: context.generatedAt,
+    salesCount: context.salesCount,
+    inventoryCount: context.inventoryCount,
+    totalUnits: context.totalUnits,
+    totalRevenue: context.totalRevenue,
+    dailyAverage: context.dailyAverage,
+    recent7: context.recent7,
+    prior7: context.prior7,
+    trendPct: context.trendPct,
+    forecastStartDate: context.forecastStartDate,
+    latestSaleDate: context.latestSaleDate,
+    dailySeries: context.dailySeries
+  });
+
+  return payload;
+}
+
+export async function generateForecast({
+  salesHistory,
+  inventory,
+  horizonDays,
+  statsServiceUrl,
+  summaryServiceUrl
+}) {
+  const context = buildForecastContext({ salesHistory, inventory, horizonDays });
+  const normalizedStatsServiceUrl =
+    normalizeServiceUrl(statsServiceUrl) || normalizeServiceUrl(globalThis.process?.env?.FORECAST_STATS_SERVICE_URL);
+  const normalizedSummaryServiceUrl =
+    normalizeServiceUrl(summaryServiceUrl) || normalizeServiceUrl(globalThis.process?.env?.FORECAST_SUMMARY_URL);
+
+  if (normalizedStatsServiceUrl) {
+    try {
+      const payload = await requestStatsForecast(normalizedStatsServiceUrl, context);
+      const forecast = normalizeForecastOutput(payload, context, "statsmodels", payload?.model || "statsmodels");
+      return await maybeEnhanceSummary(normalizedSummaryServiceUrl, context, forecast);
+    } catch (error) {
+      const fallback = buildHeuristicPayload(context);
+      const fallbackWithSummary = await maybeEnhanceSummary(normalizedSummaryServiceUrl, context, fallback);
+      return {
+        ...fallbackWithSummary,
+        notes: [...fallbackWithSummary.notes, `Statsmodels fallback triggered: ${error?.message || "Unknown error"}`]
+      };
+    }
+  }
+
+  const fallback = buildHeuristicPayload(context);
+  return maybeEnhanceSummary(normalizedSummaryServiceUrl, context, fallback);
+}
+
+export { HORIZON_OPTIONS as FORECAST_HORIZON_OPTIONS };
