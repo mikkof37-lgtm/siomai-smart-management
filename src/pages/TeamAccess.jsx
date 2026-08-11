@@ -75,6 +75,10 @@ export default function TeamAccess({ onLogout, currentUser }) {
     });
   }, [users]);
 
+  const selectedUser = useMemo(() => {
+    return sortedUsers.find((user) => user.id === form.userId) || null;
+  }, [form.userId, sortedUsers]);
+
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -270,7 +274,7 @@ export default function TeamAccess({ onLogout, currentUser }) {
                             onClick={() => beginEdit(user)}
                             className="rounded-full bg-[#fff1e3] px-3 py-1.5 text-xs font-semibold text-[#c96f15] transition hover:bg-[#ffe2c8]"
                           >
-                            Edit
+                            Select
                           </button>
                         </div>
                       </div>
@@ -281,14 +285,14 @@ export default function TeamAccess({ onLogout, currentUser }) {
             </div>
 
             <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <h2 className="text-lg font-semibold text-[#2b2018]">Edit access</h2>
+              <h2 className="text-lg font-semibold text-[#2b2018]">Edit selected user</h2>
               <p className="mt-1 text-sm text-[#8c7b6d]">
-                Choose a user, then update their display name, role, and default branch.
+                Pick one user from the list or dropdown, then update their display name, role, and default branch.
               </p>
 
               <form onSubmit={saveUser} className="mt-6 space-y-4">
                 <label className="space-y-2">
-                  <span className="text-sm font-medium text-[#5a4a3f]">Selected user</span>
+                  <span className="text-sm font-medium text-[#5a4a3f]">User to edit</span>
                   <select
                     value={form.userId}
                     onChange={(event) => {
@@ -301,7 +305,7 @@ export default function TeamAccess({ onLogout, currentUser }) {
                     }}
                     className="w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
                   >
-                    <option value="">Select a user</option>
+                    <option value="">Select a user to edit</option>
                     {sortedUsers.map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.fullName || user.email || user.id}
@@ -309,6 +313,30 @@ export default function TeamAccess({ onLogout, currentUser }) {
                     ))}
                   </select>
                 </label>
+
+                {selectedUser ? (
+                  <div className="rounded-2xl border border-[#efe6dc] bg-[#fffaf5] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9a8b7d]">
+                      Currently editing
+                    </p>
+                    <p className="mt-2 text-base font-semibold text-[#2b2018]">
+                      {selectedUser.fullName || selectedUser.email || selectedUser.id}
+                    </p>
+                    <p className="mt-1 text-sm text-[#8c7b6d]">{selectedUser.email || selectedUser.id}</p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-white px-3 py-1 font-medium text-[#6f5f52]">
+                        {ROLE_LABELS[selectedUser.role] || selectedUser.role}
+                      </span>
+                      <span className="rounded-full bg-white px-3 py-1 font-medium text-[#6f5f52]">
+                        {branchLabel(selectedUser.defaultBranch)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[#e9ddd0] bg-[#fffaf5] px-4 py-5 text-sm text-[#8c7b6d]">
+                    Choose a user to load their access settings here.
+                  </div>
+                )}
 
                 <label className="space-y-2">
                   <span className="text-sm font-medium text-[#5a4a3f]">Display name</span>
@@ -364,7 +392,7 @@ export default function TeamAccess({ onLogout, currentUser }) {
                     disabled={!form.userId || savingUserId === form.userId}
                     className="flex-1 rounded-xl bg-[#ff7a1a] py-3 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {savingUserId === form.userId ? "Saving..." : "Save user"}
+                    {savingUserId === form.userId ? "Saving..." : "Save changes"}
                   </button>
                   <button
                     type="button"
