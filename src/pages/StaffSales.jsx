@@ -552,7 +552,7 @@ export default function StaffSales({ onLogout, currentUser }) {
           currentUser={currentUser}
         />
 
-        <div className="px-8 pb-10 pt-6">
+        <div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
           <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-[24px] border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
               <div className="flex items-center justify-between">

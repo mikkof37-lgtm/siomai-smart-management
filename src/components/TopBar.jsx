@@ -69,7 +69,7 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
     <button
       type="button"
       onClick={() => setAccountMenuOpen((prev) => !prev)}
-      className="flex items-center gap-2 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-bg)] px-3 py-2 shadow-sm transition hover:border-[#ffb47b]"
+      className="flex w-full items-center justify-between gap-2 rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-bg)] px-3 py-2 shadow-sm transition hover:border-[#ffb47b] sm:w-auto"
       aria-expanded={accountMenuOpen}
       aria-haspopup="menu"
     >
@@ -89,11 +89,11 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
   );
 
   return (
-    <div className={isRichHeader ? "px-8 pt-8" : "px-8 pt-8"}>
+    <div className="px-4 pt-4 sm:px-6 lg:px-8 lg:pt-8">
       {isRichHeader ? (
-        <div className="flex flex-col gap-4 rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-bg)] px-6 py-5 shadow-[0_20px_60px_-35px_rgba(58,41,29,0.55)] xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-4 rounded-[24px] border border-[var(--surface-border)] bg-[var(--surface-bg)] px-4 py-4 shadow-[0_20px_60px_-35px_rgba(58,41,29,0.55)] sm:px-5 sm:py-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 flex-1 items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#ff7a1a] text-white shadow-lg shadow-orange-900/40">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ff7a1a] text-white shadow-lg shadow-orange-900/40 sm:h-12 sm:w-12">
               <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
                 <path
                   d="M4 10.5 12 5l8 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z"
@@ -114,12 +114,12 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
               <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#fff1e3] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#c96f15]">
                 Sio Republic
               </div>
-              <h1 className="text-2xl font-semibold text-[var(--app-text)]">{title}</h1>
+              <h1 className="text-xl font-semibold text-[var(--app-text)] sm:text-2xl">{title}</h1>
               <p className="mt-1 max-w-2xl text-sm text-[var(--surface-muted)]">{subtitle}</p>
             </div>
           </div>
 
-          <div ref={accountMenuRef} className="flex flex-wrap items-center gap-3">
+          <div ref={accountMenuRef} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="hidden rounded-2xl border border-[var(--surface-border)] bg-[var(--surface-bg)] px-4 py-2 text-left shadow-sm md:block">
               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
                 Today
@@ -198,7 +198,7 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[28px] border border-[var(--surface-border)] bg-[var(--surface-bg)] px-6 py-4 shadow-[0_20px_60px_-35px_rgba(58,41,29,0.45)]">
+        <div className="flex flex-col gap-3 rounded-[24px] border border-[var(--surface-border)] bg-[var(--surface-bg)] px-4 py-4 shadow-[0_20px_60px_-35px_rgba(58,41,29,0.45)] sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex min-w-0 items-center gap-4">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ff7a1a] text-white shadow-lg shadow-orange-900/40">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
@@ -229,7 +229,7 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
             </div>
           </div>
 
-          <div ref={accountMenuRef} className="flex flex-wrap items-center gap-3">
+          <div ref={accountMenuRef} className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <NotificationBell />
             <div className="relative">
               {accountButton}

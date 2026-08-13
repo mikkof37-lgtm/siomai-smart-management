@@ -31,4 +31,6 @@
 body {
   background: var(--app-bg);
   color: var(--app-text);
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }

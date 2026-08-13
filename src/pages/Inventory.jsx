@@ -390,7 +390,7 @@ return (
 
 <TopBar onLogout={onLogout} currentUser={currentUser} />
 
-<div className="px-8 pb-10 pt-6">
+<div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
 
 <div className="mb-8 rounded-3xl border border-[#efe6dc] bg-white/90 p-6 shadow-[0_18px_50px_-35px_rgba(58,41,29,0.55)] backdrop-blur">
   <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">

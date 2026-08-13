@@ -195,7 +195,7 @@ export default function TeamAccess({ onLogout, currentUser }) {
           currentUser={currentUser}
         />
 
-        <div className="px-8 pb-10 pt-6">
+        <div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
               <p className="text-sm text-[#8c7b6d]">Current role</p>
@@ -242,44 +242,95 @@ export default function TeamAccess({ onLogout, currentUser }) {
               )}
 
               <div className="mt-6 overflow-hidden rounded-2xl border border-[#efe6dc]">
-                <div className="grid grid-cols-[1.3fr_1fr_1fr_1fr_120px] gap-3 border-b border-[#f2eae0] bg-[#fffaf5] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#9a8b7d]">
-                  <div>User</div>
-                  <div>Role</div>
-                  <div>Branch</div>
-                  <div>Last sign-in</div>
-                  <div className="text-right">Action</div>
-                </div>
-
-                <div className="divide-y divide-[#f4ede4]">
+                <div className="space-y-4 p-4 md:hidden">
                   {loading ? (
-                    <div className="px-4 py-8 text-sm text-[#8c7b6d]">Loading users...</div>
+                    <div className="rounded-2xl border border-dashed border-[#e9ddd0] bg-[#fffaf5] px-4 py-8 text-sm text-[#8c7b6d]">
+                      Loading users...
+                    </div>
                   ) : sortedUsers.length === 0 ? (
-                    <div className="px-4 py-8 text-sm text-[#8c7b6d]">No users found.</div>
+                    <div className="rounded-2xl border border-dashed border-[#e9ddd0] bg-[#fffaf5] px-4 py-8 text-sm text-[#8c7b6d]">
+                      No users found.
+                    </div>
                   ) : (
                     sortedUsers.map((user) => (
-                      <div
-                        key={user.id}
-                        className="grid grid-cols-[1.3fr_1fr_1fr_1fr_120px] gap-3 px-4 py-4 text-sm"
-                      >
-                        <div>
-                          <div className="font-semibold text-[#2b2018]">{user.fullName || user.email || user.id}</div>
-                          <div className="text-xs text-[#9a8b7d]">{user.email}</div>
-                        </div>
-                        <div className="text-[#6f5f52]">{ROLE_LABELS[user.role] || user.role}</div>
-                        <div className="text-[#6f5f52]">{branchLabel(user.defaultBranch)}</div>
-                        <div className="text-[#6f5f52]">{formatDate(user.lastSignInAt) || "Never"}</div>
-                        <div className="text-right">
+                      <div key={user.id} className="rounded-2xl border border-[#efe6dc] bg-[#fffdfb] p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-base font-semibold text-[#2b2018]">
+                              {user.fullName || user.email || user.id}
+                            </p>
+                            <p className="mt-1 break-all text-xs text-[#9a8b7d]">{user.email}</p>
+                          </div>
                           <button
                             type="button"
                             onClick={() => beginEdit(user)}
-                            className="rounded-full bg-[#fff1e3] px-3 py-1.5 text-xs font-semibold text-[#c96f15] transition hover:bg-[#ffe2c8]"
+                            className="shrink-0 rounded-full bg-[#fff1e3] px-3 py-1.5 text-xs font-semibold text-[#c96f15] transition hover:bg-[#ffe2c8]"
                           >
                             Select
                           </button>
                         </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.14em] text-[#9a8b7d]">Role</p>
+                            <p className="mt-1 text-[#6f5f52]">{ROLE_LABELS[user.role] || user.role}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.14em] text-[#9a8b7d]">Branch</p>
+                            <p className="mt-1 text-[#6f5f52]">{branchLabel(user.defaultBranch)}</p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-[11px] uppercase tracking-[0.14em] text-[#9a8b7d]">
+                              Last sign-in
+                            </p>
+                            <p className="mt-1 text-[#6f5f52]">{formatDate(user.lastSignInAt) || "Never"}</p>
+                          </div>
+                        </div>
                       </div>
                     ))
                   )}
+                </div>
+
+                <div className="hidden md:block">
+                  <div className="grid grid-cols-[1.3fr_1fr_1fr_1fr_120px] gap-3 border-b border-[#f2eae0] bg-[#fffaf5] px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#9a8b7d]">
+                    <div>User</div>
+                    <div>Role</div>
+                    <div>Branch</div>
+                    <div>Last sign-in</div>
+                    <div className="text-right">Action</div>
+                  </div>
+
+                  <div className="divide-y divide-[#f4ede4]">
+                    {loading ? (
+                      <div className="px-4 py-8 text-sm text-[#8c7b6d]">Loading users...</div>
+                    ) : sortedUsers.length === 0 ? (
+                      <div className="px-4 py-8 text-sm text-[#8c7b6d]">No users found.</div>
+                    ) : (
+                      sortedUsers.map((user) => (
+                        <div
+                          key={user.id}
+                          className="grid grid-cols-[1.3fr_1fr_1fr_1fr_120px] gap-3 px-4 py-4 text-sm"
+                        >
+                          <div>
+                            <div className="font-semibold text-[#2b2018]">{user.fullName || user.email || user.id}</div>
+                            <div className="text-xs text-[#9a8b7d]">{user.email}</div>
+                          </div>
+                          <div className="text-[#6f5f52]">{ROLE_LABELS[user.role] || user.role}</div>
+                          <div className="text-[#6f5f52]">{branchLabel(user.defaultBranch)}</div>
+                          <div className="text-[#6f5f52]">{formatDate(user.lastSignInAt) || "Never"}</div>
+                          <div className="text-right">
+                            <button
+                              type="button"
+                              onClick={() => beginEdit(user)}
+                              className="rounded-full bg-[#fff1e3] px-3 py-1.5 text-xs font-semibold text-[#c96f15] transition hover:bg-[#ffe2c8]"
+                            >
+                              Select
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

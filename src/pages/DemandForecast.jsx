@@ -117,7 +117,7 @@ export default function DemandForecast({ onLogout, currentUser }) {
           currentUser={currentUser}
         />
 
-        <div className="px-8 pb-10 pt-6">
+        <div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
           <div className="mb-6 rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>

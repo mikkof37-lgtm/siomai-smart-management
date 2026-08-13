@@ -225,16 +225,16 @@ export default function SalesHistory({ onLogout, currentUser }) {
         <div className="flex-1">
           <TopBar onLogout={onLogout} currentUser={currentUser} />
 
-          <div className="px-8 pb-10 pt-6">
-            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
+            <div className="mb-6 flex flex-col gap-4 lg:mb-8 lg:flex-row lg:flex-wrap lg:items-center lg:justify-between">
               <div>
-                <h1 className="text-3xl font-semibold text-[#2b2018]">Sales History</h1>
+                <h1 className="text-2xl font-semibold text-[#2b2018] sm:text-3xl">Sales History</h1>
                 <p className="text-sm text-[#8c7b6d]">
                   View past transactions and record new sales quickly.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2 rounded-full border border-[#efe6dc] bg-white px-4 py-2 text-sm text-[#6f5f52] shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#efe6dc] bg-white px-4 py-3 text-sm text-[#6f5f52] shadow-sm">
                   <label className="text-xs font-semibold text-[#9a8b7d]">Filter date</label>
                   <input
                     type="date"
@@ -259,7 +259,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 rounded-full border border-[#efe6dc] bg-white px-4 py-2 text-sm text-[#6f5f52] shadow-sm">
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#efe6dc] bg-white px-4 py-3 text-sm text-[#6f5f52] shadow-sm">
                   <label className="text-xs font-semibold text-[#9a8b7d]">Branch</label>
                   <select
                     value={filterBranch}
@@ -293,7 +293,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                 <button
                   type="button"
                   onClick={openRecordModal}
-                  className="inline-flex items-center gap-2 rounded-full bg-[#ff7a1a] px-5 py-2 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00]"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff7a1a] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00]"
                 >
                   <span className="text-base leading-none">+</span>
                   Record Sale
@@ -308,7 +308,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                       if (!confirmed) return;
                       clearRecordedSales();
                     }}
-                    className="inline-flex items-center gap-2 rounded-full border border-[#efc9b4] bg-white px-5 py-2 text-sm font-semibold text-[#c35f18] shadow-sm transition hover:border-[#ffb47b] hover:text-[#ff6a00]"
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-[#efc9b4] bg-white px-5 py-3 text-sm font-semibold text-[#c35f18] shadow-sm transition hover:border-[#ffb47b] hover:text-[#ff6a00]"
                   >
                     Erase All Sales
                   </button>
@@ -346,36 +346,43 @@ export default function SalesHistory({ onLogout, currentUser }) {
                 </div>
               </div>
 
-              <div
-                className={`grid ${tableGridClass} border-b border-[#f2eae0] px-6 py-3 text-xs font-semibold text-[#9a8b7d]`}
-              >
-                <div>Date</div>
-                <div>Branch</div>
-                <div>Product Name</div>
-                <div className="text-center">Quantity</div>
-                <div className="text-right">Unit Price</div>
-                <div className="text-right">Total Revenue</div>
-                {canManageSalesHistory && <div className="text-right">Action</div>}
-              </div>
+              <div className="space-y-4 p-4 md:hidden">
+                {paginatedSales.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[#e8ddd0] bg-[#fcfaf7] px-5 py-8 text-center text-sm text-[#8c7b6d]">
+                    No sales found for the selected date or branch.
+                  </div>
+                ) : (
+                  paginatedSales.map((sale) => {
+                    const total = sale.qty * sale.price;
+                    return (
+                      <div key={sale.id} className="rounded-2xl border border-[#efe6dc] bg-[#fffdfb] p-4 shadow-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#9a8b7d]">
+                              {sale.date}
+                            </p>
+                            <h3 className="mt-1 text-base font-semibold text-[#2b2018]">
+                              {sale.product}
+                            </h3>
+                            <p className="mt-1 text-sm text-[#8c7b6d]">{sale.branch || "Unassigned"}</p>
+                          </div>
+                          <span className="rounded-full bg-[#fff1e3] px-3 py-1 text-xs font-semibold text-[#c96f15]">
+                            {sale.qty} pcs
+                          </span>
+                        </div>
 
-              <div className="divide-y divide-[#f4ede4]">
-                {paginatedSales.map((sale) => {
-                  const total = sale.qty * sale.price;
-                  return (
-                    <div
-                      key={sale.id}
-                      className={`grid ${tableGridClass} items-center px-6 py-3 text-sm`}
-                    >
-                      <div className="text-[#8c7b6d]">{sale.date}</div>
-                      <div className="text-[#2b2018]">{sale.branch || "Unassigned"}</div>
-                      <div className="font-semibold text-[#2b2018]">{sale.product}</div>
-                      <div className="text-center font-semibold text-[#2b2018]">{sale.qty}</div>
-                      <div className="text-right text-[#8c7b6d]">{formatCurrency(sale.price)}</div>
-                      <div className="text-right font-semibold text-[#ff7a1a]">
-                        {formatCurrency(total)}
-                      </div>
-                      {canManageSalesHistory && (
-                        <div className="flex justify-end">
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.16em] text-[#9a8b7d]">Unit Price</p>
+                            <p className="mt-1 font-semibold text-[#2b2018]">{formatCurrency(sale.price)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] uppercase tracking-[0.16em] text-[#9a8b7d]">Total</p>
+                            <p className="mt-1 font-semibold text-[#ff7a1a]">{formatCurrency(total)}</p>
+                          </div>
+                        </div>
+
+                        {canManageSalesHistory && (
                           <button
                             type="button"
                             onClick={() => {
@@ -385,21 +392,74 @@ export default function SalesHistory({ onLogout, currentUser }) {
                               if (!confirmed) return;
                               deleteSaleRecord(sale.id);
                             }}
-                            className="rounded-full border border-[#efc9b4] bg-white px-3 py-1 text-xs font-semibold text-[#c35f18] transition hover:border-[#ffb47b] hover:text-[#ff6a00]"
+                            className="mt-4 w-full rounded-xl border border-[#efc9b4] bg-white px-4 py-2 text-sm font-semibold text-[#c35f18] transition hover:border-[#ffb47b] hover:text-[#ff6a00]"
                             aria-label={`Delete ${sale.product} record`}
                           >
                             Delete
                           </button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {filteredSales.length === 0 && (
-                  <div className="px-6 py-6 text-center text-sm text-[#9a8b7d]">
-                    No sales found for the selected date or branch.
-                  </div>
+                        )}
+                      </div>
+                    );
+                  })
                 )}
+              </div>
+
+              <div className="hidden md:block">
+                <div
+                  className={`grid ${tableGridClass} border-b border-[#f2eae0] px-6 py-3 text-xs font-semibold text-[#9a8b7d]`}
+                >
+                  <div>Date</div>
+                  <div>Branch</div>
+                  <div>Product Name</div>
+                  <div className="text-center">Quantity</div>
+                  <div className="text-right">Unit Price</div>
+                  <div className="text-right">Total Revenue</div>
+                  {canManageSalesHistory && <div className="text-right">Action</div>}
+                </div>
+
+                <div className="divide-y divide-[#f4ede4]">
+                  {paginatedSales.map((sale) => {
+                    const total = sale.qty * sale.price;
+                    return (
+                      <div
+                        key={sale.id}
+                        className={`grid ${tableGridClass} items-center px-6 py-3 text-sm`}
+                      >
+                        <div className="text-[#8c7b6d]">{sale.date}</div>
+                        <div className="text-[#2b2018]">{sale.branch || "Unassigned"}</div>
+                        <div className="font-semibold text-[#2b2018]">{sale.product}</div>
+                        <div className="text-center font-semibold text-[#2b2018]">{sale.qty}</div>
+                        <div className="text-right text-[#8c7b6d]">{formatCurrency(sale.price)}</div>
+                        <div className="text-right font-semibold text-[#ff7a1a]">
+                          {formatCurrency(total)}
+                        </div>
+                        {canManageSalesHistory && (
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const confirmed = window.confirm(
+                                  `Delete ${sale.product} from ${sale.date}?`
+                                );
+                                if (!confirmed) return;
+                                deleteSaleRecord(sale.id);
+                              }}
+                              className="rounded-full border border-[#efc9b4] bg-white px-3 py-1 text-xs font-semibold text-[#c35f18] transition hover:border-[#ffb47b] hover:text-[#ff6a00]"
+                              aria-label={`Delete ${sale.product} record`}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {filteredSales.length === 0 && (
+                    <div className="px-6 py-6 text-center text-sm text-[#9a8b7d]">
+                      No sales found for the selected date or branch.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
