@@ -6,6 +6,7 @@ import { useInventory } from "../context/InventoryContext";
 import { useSales } from "../context/SalesContext";
 import { isAdminOrOwner } from "../utils/authRoles";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
+import { buildUniqueSaleProductOptions } from "../utils/saleProductOptions";
 import {
   formatInventoryQuantityForDisplay,
   getSaleInventoryQuantity,
@@ -28,8 +29,7 @@ const normalizeText = (value) =>
 const SIOMAI_BUNDLE_PRICING = new Map([
   ["regular pork siomai", { bundlePrice: 16, bundleQty: 3 }],
   ["chicken siomai", { bundlePrice: 16, bundleQty: 3 }],
-  ["premium pork siomai", { bundlePrice: 18, bundleQty: 3 }],
-  ["japanese siomai", { bundlePrice: 20, bundleQty: 3 }]
+  ["premium pork siomai", { bundlePrice: 18, bundleQty: 3 }]
 ]);
 
 const resolveInventoryItem = (inventory, productName) => {
@@ -83,11 +83,9 @@ export default function SalesHistory({ onLogout, currentUser }) {
   const canManageSalesHistory = isAdminOrOwner(currentUser);
 
   const inventoryProductOptions = useMemo(() => {
-    return [...inventory]
-      .sort(compareInventoryDisplayOrder)
-      .map((item) => ({
-        name: item.name
-      }));
+    return buildUniqueSaleProductOptions([...inventory].sort(compareInventoryDisplayOrder)).map((item) => ({
+      name: item.name
+    }));
   }, [inventory]);
 
   const selectedInventoryItem = resolveInventoryItem(inventory, recordForm.product);
