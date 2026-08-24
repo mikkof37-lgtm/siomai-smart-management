@@ -38,25 +38,6 @@ export default function DemandForecast({ onLogout, currentUser }) {
   const [error, setError] = useState("");
 
   const forecastData = useMemo(() => forecast?.demandSeries ?? [], [forecast]);
-  const summaryCards = useMemo(() => {
-    return [
-      {
-        label: "Forecast horizon",
-        value: forecast ? `${forecast.horizonDays} days` : `${horizonDays} days`
-      },
-      {
-        label: "Confidence",
-        value: forecast ? `${Math.round(forecast.confidence)}%` : "--"
-      },
-      {
-        label: "Predicted units",
-        value: forecast
-          ? formatNumber(forecastData.reduce((sum, entry) => sum + Number(entry.predictedUnits || 0), 0))
-          : "--"
-      }
-    ];
-  }, [forecast, forecastData, horizonDays]);
-
   const chartData = useMemo(() => {
     return forecastData.map((entry) => ({
       date: formatDateLabel(entry.date),
@@ -107,24 +88,79 @@ export default function DemandForecast({ onLogout, currentUser }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-[var(--app-bg)]">
+    <div className="flex min-h-screen flex-col bg-[linear-gradient(180deg,#f3f7fb_0%,#eef4f8_48%,#e9eff4_100%)] md:flex-row">
       <Sidebar currentUser={currentUser} />
       <div className="flex-1">
         <TopBar
           title="Demand Forecast"
-          subtitle="A simple forecast page that looks at recent sales and gives a basic trend estimate."
+          subtitle="Read the trend, check confidence, and plan the next reorder."
           onLogout={onLogout}
           currentUser={currentUser}
         />
 
-        <div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
-          <div className="mb-6 rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
+        <div className="px-4 pb-28 pt-4 sm:px-6 sm:pb-28 sm:pt-6 lg:px-8">
+          <div className="mb-6 overflow-hidden rounded-[28px] border border-[rgba(49,67,84,0.12)] bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(245,249,252,0.96)_58%,rgba(233,242,248,0.94)_100%)] shadow-[0_24px_64px_-36px_rgba(37,54,67,0.3)]">
+            <div className="grid gap-5 px-6 py-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.8fr)] lg:items-center">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#e6f1f7] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#37637e]">
+                  Planning desk
+                </div>
+                <h1 className="text-3xl font-semibold text-[#173142] sm:text-4xl">
+                  Forecast tomorrow from today&apos;s sales signal.
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[#5d7382]">
+                  Read the trend line, check confidence, and decide whether the next reorder should
+                  be cautious or aggressive.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-[20px] border border-[rgba(49,67,84,0.12)] bg-white/90 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5d7382]">
+                    Horizon
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-[#173142]">
+                    {forecast ? `${forecast.horizonDays} days` : `${horizonDays} days`}
+                  </p>
+                </div>
+                <div className="rounded-[20px] border border-[rgba(49,67,84,0.12)] bg-white/90 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5d7382]">
+                    Confidence
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-[#173142]">
+                    {forecast ? `${Math.round(forecast.confidence)}%` : "--"}
+                  </p>
+                </div>
+                <div className="rounded-[20px] border border-[rgba(49,67,84,0.12)] bg-white/90 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5d7382]">
+                    Projected units
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-[#1f6f8b]">
+                    {forecast
+                      ? formatNumber(
+                          forecastData.reduce((sum, entry) => sum + Number(entry.predictedUnits || 0), 0)
+                        )
+                      : "--"}
+                  </p>
+                </div>
+                <div className="rounded-[20px] border border-[rgba(49,67,84,0.12)] bg-white/90 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5d7382]">
+                    Signal
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-[#1f6f8b]">
+                    {forecast ? forecast.source : "Pending"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-6 rounded-[28px] border border-[rgba(49,67,84,0.12)] bg-white/90 p-5 shadow-[0_18px_50px_-32px_rgba(37,54,67,0.28)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h1 className="text-2xl font-semibold text-[#2b2018]">Demand Forecast</h1>
-                <p className="mt-1 text-sm text-[#8c7b6d]">
-                  This page estimates future demand from your sales history. For actual buying
-                  quantities, use the Restock Orders page.
+                <h2 className="text-lg font-semibold text-[#173142]">Forecast controls</h2>
+                <p className="mt-1 text-sm text-[#607483]">
+                  Choose a horizon and generate the planning view from recent sales.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -136,8 +172,8 @@ export default function DemandForecast({ onLogout, currentUser }) {
                     className={[
                       "rounded-full border px-4 py-2 text-sm font-semibold transition",
                       horizonDays === option
-                        ? "border-[#ff7a1a] bg-[#ff7a1a] text-white"
-                        : "border-[#efe6dc] bg-white text-[#6f5f52] hover:border-[#ffb47b]"
+                        ? "border-[#1f6f8b] bg-[#1f6f8b] text-white"
+                        : "border-[rgba(49,67,84,0.12)] bg-white text-[#4d6574] hover:border-[#1f6f8b] hover:text-[#1f6f8b]"
                     ].join(" ")}
                   >
                     {option} days
@@ -147,9 +183,9 @@ export default function DemandForecast({ onLogout, currentUser }) {
                   type="button"
                   onClick={handleGenerate}
                   disabled={isGenerating}
-                  className="rounded-full bg-[#2b2018] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f1712] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-full bg-[#173142] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#102634] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isGenerating ? "Generating..." : forecast ? "Regenerate" : "Generate forecast"}
+                  {isGenerating ? "Generating..." : forecast ? "Refresh forecast" : "Generate forecast"}
                 </button>
               </div>
             </div>
@@ -161,71 +197,60 @@ export default function DemandForecast({ onLogout, currentUser }) {
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {summaryCards.map((card) => (
-              <div
-                key={card.label}
-                className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]"
-              >
-                <p className="text-sm text-[#8c7b6d]">{card.label}</p>
-                <p className="mt-2 text-2xl font-semibold text-[#2b2018]">{card.value}</p>
-              </div>
-            ))}
-          </div>
-
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)]">
             <div className="space-y-6">
-              <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
+              <div className="rounded-[28px] border border-[rgba(49,67,84,0.12)] bg-white/95 p-5 shadow-[0_18px_50px_-32px_rgba(37,54,67,0.24)]">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <h2 className="text-sm font-semibold text-[#2b2018]">Forecast chart</h2>
-                    <p className="text-xs text-[#9a8b7d]">
-                      Predicted units and confidence over time
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5d7382]">
+                      Trend line
                     </p>
+                    <h2 className="mt-1 text-lg font-semibold text-[#173142]">Forecast chart</h2>
+                    <p className="text-xs text-[#607483]">Projected units and confidence over time</p>
                   </div>
-                  <span className="rounded-full bg-[#fffaf5] px-3 py-1 text-[11px] font-semibold text-[#7f6d60]">
+                  <span className="rounded-full bg-[#e6f1f7] px-3 py-1 text-[11px] font-semibold text-[#37637e]">
                     {forecast ? forecast.source : "No data yet"}
                   </span>
                 </div>
 
                 <div className="h-72">
                   {isGenerating ? (
-                    <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-[#efe6dc] bg-[#fffaf5] text-sm text-[#9a8b7d]">
+                    <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-[rgba(49,67,84,0.12)] bg-[#f6f9fb] text-sm text-[#607483]">
                       Generating forecast...
                     </div>
                   ) : forecastData.length === 0 ? (
-                    <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-[#efe6dc] bg-[#fffaf5] text-sm text-[#9a8b7d]">
-                      Click generate to show the forecast.
+                    <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-[rgba(49,67,84,0.12)] bg-[#f6f9fb] text-sm text-[#607483]">
+                      Generate a forecast to show the chart.
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="4 6" stroke="#efe6dc" />
-                        <XAxis dataKey="date" tick={{ fill: "#a28f80", fontSize: 12 }} />
-                        <YAxis tick={{ fill: "#a28f80", fontSize: 12 }} />
+                        <CartesianGrid strokeDasharray="4 6" stroke="rgba(49,67,84,0.12)" />
+                        <XAxis dataKey="date" tick={{ fill: "#5d7382", fontSize: 12 }} />
+                        <YAxis tick={{ fill: "#5d7382", fontSize: 12 }} />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "#ffffff",
+                            backgroundColor: "#fdfefe",
                             borderRadius: 12,
-                            borderColor: "#efe6dc",
+                            borderColor: "rgba(49,67,84,0.12)",
                             fontSize: 12
                           }}
                           formatter={(value, name) => [
                             name === "predictedUnits" ? formatNumber(value) : `${Math.round(value)}%`,
-                            name === "predictedUnits" ? "Predicted units" : "Confidence"
+                            name === "predictedUnits" ? "Projected units" : "Confidence"
                           ]}
                         />
                         <Line
                           type="monotone"
                           dataKey="predictedUnits"
-                          stroke="#ff7a1a"
+                          stroke="#1f6f8b"
                           strokeWidth={3}
-                          dot={{ r: 4, fill: "#ff7a1a" }}
+                          dot={{ r: 4, fill: "#1f6f8b" }}
                         />
                         <Line
                           type="monotone"
                           dataKey="confidence"
-                          stroke="#22a06b"
+                          stroke="#7b9e2f"
                           strokeWidth={2}
                           dot={false}
                           strokeDasharray="5 5"
@@ -236,9 +261,12 @@ export default function DemandForecast({ onLogout, currentUser }) {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-                <h2 className="text-sm font-semibold text-[#2b2018]">Short summary</h2>
-                <p className="mt-3 text-sm leading-6 text-[#6f5f52]">
+              <div className="rounded-[28px] border border-[rgba(49,67,84,0.12)] bg-white/95 p-5 shadow-[0_18px_50px_-32px_rgba(37,54,67,0.24)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5d7382]">
+                  Summary
+                </p>
+                <h2 className="mt-1 text-lg font-semibold text-[#173142]">Short summary</h2>
+                <p className="mt-3 text-sm leading-6 text-[#607483]">
                   {forecast?.summary ||
                     "This section explains the forecast in simple language after you generate it."}
                 </p>
@@ -246,12 +274,14 @@ export default function DemandForecast({ onLogout, currentUser }) {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-                <h2 className="text-sm font-semibold text-[#2b2018]">Notes</h2>
+              <div className="rounded-[28px] border border-[rgba(49,67,84,0.12)] bg-white/95 p-5 shadow-[0_18px_50px_-32px_rgba(37,54,67,0.24)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5d7382]">
+                    Notes
+                  </p>
                 <div className="mt-3 space-y-3">
                   {(forecast?.notes?.length ? forecast.notes : ["No notes yet. Generate a forecast first."]).map(
                     (note) => (
-                      <div key={note} className="rounded-xl bg-[#fffaf5] px-4 py-3 text-sm text-[#6f5f52]">
+                      <div key={note} className="rounded-xl bg-[#f6f9fb] px-4 py-3 text-sm text-[#4f6575]">
                         {note}
                       </div>
                     )
@@ -259,12 +289,14 @@ export default function DemandForecast({ onLogout, currentUser }) {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-                <h2 className="text-sm font-semibold text-[#2b2018]">Risks</h2>
+              <div className="rounded-[28px] border border-[rgba(49,67,84,0.12)] bg-white/95 p-5 shadow-[0_18px_50px_-32px_rgba(37,54,67,0.24)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5d7382]">
+                    Watchouts
+                  </p>
                 <div className="mt-3 space-y-3">
-                  {(forecast?.risks?.length ? forecast.risks : ["Risks will show here after forecasting."]).map(
+                  {(forecast?.risks?.length ? forecast.risks : ["Watchouts will show here after forecasting."]).map(
                     (risk) => (
-                      <div key={risk} className="rounded-xl bg-[#fffaf5] px-4 py-3 text-sm text-[#6f5f52]">
+                      <div key={risk} className="rounded-xl bg-[#f6f9fb] px-4 py-3 text-sm text-[#4f6575]">
                         {risk}
                       </div>
                     )

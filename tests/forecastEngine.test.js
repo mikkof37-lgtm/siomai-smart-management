@@ -13,8 +13,8 @@ describe("forecast engine", () => {
   test("generateForecast falls back to the local heuristic when no service is configured", async () => {
     const result = await generateForecast({
       salesHistory: [
-        { id: 1, date: "2026-07-28", product: "Regular Pork Siomai", qty: 12, price: 6 },
-        { id: 2, date: "2026-07-29", product: "Chicken Siomai", qty: 6, price: 6 }
+        { id: 1, date: "Jul 28, 2026", product: "Regular Pork Siomai", qty: 12, price: 6 },
+        { id: 2, date: "Jul 29, 2026", product: "Chicken Siomai", qty: 6, price: 6 }
       ],
       inventory: [
         { id: "1", name: "Regular Pork Siomai", stock: 20, threshold: 10, unit: "pcs" },

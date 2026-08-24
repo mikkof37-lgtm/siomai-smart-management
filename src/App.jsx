@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { InventoryProvider } from "./context/InventoryContext";
 import { SettingsProvider } from "./context/SettingsContext";
 import Dashboard from "./pages/Dashboard";
@@ -15,6 +15,7 @@ import { supabase } from "./lib/supabaseClient";
 import { SalesProvider } from "./context/SalesContext";
 import { canAccessStaffSales, isAdminOrOwner } from "./utils/authRoles";
 import AppErrorBoundary from "./components/AppErrorBoundary";
+import MobileNav from "./components/MobileNav";
 
 export function AppShell() {
   const [isAuthed, setIsAuthed] = useState(false);
@@ -23,6 +24,13 @@ export function AppShell() {
   const [toastEntered, setToastEntered] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [isOnline, setIsOnline] = useState(() => {
+    if (typeof navigator === "undefined") return true;
+    return navigator.onLine;
+  });
+  const location = useLocation();
+  const isAuthRoute =
+    location.pathname === "/login" || location.pathname === "/reset-password";
 
   const handleLogin = () => {
     setShowLoginToast(true);
@@ -92,6 +100,21 @@ export function AppShell() {
     }
   }, [isAuthed]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
   if (!isAuthReady) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--app-bg)] px-6">
@@ -120,6 +143,16 @@ export function AppShell() {
           <div className="rounded-2xl border border-[#ffd5d0] bg-[#fff4f2] px-5 py-4 text-sm text-[#b0483b] shadow-[0_18px_50px_-25px_rgba(176,72,59,0.35)]">
             <div className="font-semibold">Auth warning</div>
             <div className="mt-1">{authError}</div>
+          </div>
+        </div>
+      )}
+      {isAuthed && !isOnline && !isAuthRoute && (
+        <div className="fixed left-1/2 top-4 z-50 w-[min(92vw,720px)] -translate-x-1/2">
+          <div className="rounded-2xl border border-[#ead8c3] bg-[#fff8ef] px-5 py-4 text-sm text-[#8a5c1b] shadow-[0_18px_50px_-25px_rgba(138,92,27,0.25)]">
+            <div className="font-semibold">Offline mode</div>
+            <div className="mt-1">
+              Inventory and sales changes are being saved locally and will sync when the connection returns.
+            </div>
           </div>
         </div>
       )}
@@ -201,6 +234,9 @@ export function AppShell() {
           }
         />
       </Routes>
+      {isAuthed && !isAuthRoute && (
+        <MobileNav currentUser={currentUser} onLogout={handleLogout} />
+      )}
       {showLoginToast && (
         <div className="fixed top-6 right-6 z-50 w-[320px]">
           <div

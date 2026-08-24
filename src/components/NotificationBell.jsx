@@ -4,7 +4,7 @@ import { useSettings } from "../context/SettingsContext";
 
 const READ_ALERTS_STORAGE_KEY = "smart_inventory_read_low_stock_alerts";
 
-export default function NotificationBell() {
+export default function NotificationBell({ compact = false }) {
   const [open, setOpen] = useState(false);
   const [readAlerts, setReadAlerts] = useState(() => {
     const stored = localStorage.getItem(READ_ALERTS_STORAGE_KEY);
@@ -84,12 +84,15 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={toggleOpen}
-        className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#efe5db] bg-white text-[#7f6d60] shadow-sm transition hover:text-[#ff7a1a]"
+        className={[
+          "relative inline-flex items-center justify-center rounded-full border border-[#efe5db] bg-white text-[#7f6d60] shadow-sm transition hover:text-[#ff7a1a]",
+          compact ? "h-9 w-9" : "h-11 w-11"
+        ].join(" ")}
         aria-label="Low stock notifications"
         aria-expanded={open}
         aria-haspopup="true"
       >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+        <svg viewBox="0 0 24 24" className={compact ? "h-4 w-4" : "h-5 w-5"} fill="none">
           <path
             d="M15 17H9m8-4V9a5 5 0 10-10 0v4l-2 2v1h14v-1l-2-2Z"
             stroke="currentColor"

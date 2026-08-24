@@ -1,3 +1,5 @@
+import { parseSaleDateValue } from "../utils/salesDates";
+
 const HORIZON_OPTIONS = [7, 14, 30];
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_SERVICE_TIMEOUT_MS = 8000;
@@ -12,19 +14,7 @@ function clamp(value, min, max) {
 }
 
 function safeDate(value) {
-  if (typeof value === "string") {
-    const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (dateOnlyMatch) {
-      const year = Number(dateOnlyMatch[1]);
-      const month = Number(dateOnlyMatch[2]) - 1;
-      const day = Number(dateOnlyMatch[3]);
-      const localDate = new Date(year, month, day);
-      return Number.isNaN(localDate.getTime()) ? null : localDate;
-    }
-  }
-
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  return parseSaleDateValue(value);
 }
 
 function startOfDay(date) {

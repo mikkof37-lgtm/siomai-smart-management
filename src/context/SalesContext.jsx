@@ -12,6 +12,9 @@ import { supabase } from "../lib/supabaseClient";
 import { useInventory } from "./InventoryContext";
 import { BRANCH_OPTIONS } from "../data/branches";
 import {
+  normalizeSaleDateValue
+} from "../utils/salesDates";
+import {
   getSaleInventoryQuantity,
   isSiomaiItem,
   roundSiomaiQuantity
@@ -20,9 +23,45 @@ import {
 const SalesContext = createContext(null);
 const STORAGE_KEY = "smart_inventory_sales";
 const CORRECTIONS_KEY = "smart_inventory_sale_corrections";
+const LAST_SYNC_KEY = "smart_inventory_sales_last_synced";
 const SALES_TABLE = import.meta.env.VITE_SUPABASE_SALES_TABLE || "sales_records";
+const SALE_BRANCH_PREFIX = "__smart_inventory_branch__:";
 const hasSupabaseConfig =
   Boolean(import.meta.env.VITE_SUPABASE_URL) && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+function encodeSaleNotes(branch, notes) {
+  const cleanBranch = typeof branch === "string" ? branch.trim() : "";
+  const cleanNotes = typeof notes === "string" ? notes.trim() : "";
+
+  if (!cleanBranch) return cleanNotes;
+
+  const prefix = `${SALE_BRANCH_PREFIX}${encodeURIComponent(cleanBranch)}`;
+  return cleanNotes ? `${prefix}\n${cleanNotes}` : prefix;
+}
+
+function decodeSaleNotes(notes) {
+  const text = typeof notes === "string" ? notes : "";
+  if (!text.startsWith(SALE_BRANCH_PREFIX)) {
+    return { branch: "", notes: text };
+  }
+
+  const remainder = text.slice(SALE_BRANCH_PREFIX.length);
+  const newlineIndex = remainder.indexOf("\n");
+  const branchToken = newlineIndex >= 0 ? remainder.slice(0, newlineIndex) : remainder;
+  const cleanedNotes = newlineIndex >= 0 ? remainder.slice(newlineIndex + 1) : "";
+
+  try {
+    return {
+      branch: decodeURIComponent(branchToken),
+      notes: cleanedNotes
+    };
+  } catch {
+    return {
+      branch: branchToken,
+      notes: cleanedNotes
+    };
+  }
+}
 
 function normalizeSale(sale) {
   if (!sale || typeof sale !== "object") return null;
@@ -30,20 +69,26 @@ function normalizeSale(sale) {
   const id = sale.id ?? sale.sale_id ?? `sale-${Date.now()}`;
   const inventoryItemId =
     sale.inventoryItemId ?? sale.inventory_item_id ?? sale.inventory_itemid ?? null;
+  const decodedNotes = decodeSaleNotes(
+    typeof sale.notes === "string" ? sale.notes : typeof sale.note === "string" ? sale.note : ""
+  );
+  const branchValue = sale.branch ?? sale.branch_name ?? decodedNotes.branch;
 
   return {
     ...sale,
     id: typeof id === "string" ? id : String(id),
-    date: typeof sale.date === "string" ? sale.date : "",
+    date: normalizeSaleDateValue(
+      sale.date ?? sale.sale_date ?? sale.recorded_at ?? sale.createdAt ?? sale.created_at
+    ),
     product: typeof sale.product === "string" ? sale.product : "",
     qty: Number(sale.qty ?? 0),
     price: Number(sale.price ?? 0),
-    notes: typeof sale.notes === "string" ? sale.notes : "",
+    notes: decodedNotes.notes,
     branch:
-      BRANCH_OPTIONS.some((option) => option.value === sale.branch)
-        ? sale.branch
-        : typeof sale.branch === "string"
-        ? sale.branch.trim()
+      BRANCH_OPTIONS.some((option) => option.value === branchValue)
+        ? branchValue
+        : typeof branchValue === "string"
+        ? branchValue.trim()
         : "",
     inventoryItemId:
       inventoryItemId === null || inventoryItemId === undefined ? undefined : Number(inventoryItemId),
@@ -66,6 +111,38 @@ function normalizeSale(sale) {
 function normalizeSales(items) {
   if (!Array.isArray(items)) return [];
   return items.map(normalizeSale).filter(Boolean);
+}
+
+function getSaleSortTime(sale) {
+  const value = sale?.createdAt || sale?.date || "";
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function mergeSalesSnapshots(remoteItems, localItems) {
+  const mergedById = new Map();
+
+  [...normalizeSales(remoteItems), ...normalizeSales(localItems)].forEach((sale) => {
+    mergedById.set(String(sale.id), sale);
+  });
+
+  return [...mergedById.values()].sort((a, b) => getSaleSortTime(b) - getSaleSortTime(a));
+}
+
+function sortSalesDescending(items) {
+  return [...items].sort((a, b) => getSaleSortTime(b) - getSaleSortTime(a));
+}
+
+function readStoredSalesSnapshot() {
+  const stored = localStorage.getItem(LAST_SYNC_KEY);
+  if (!stored) return [];
+
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? normalizeSales(parsed) : [];
+  } catch {
+    return [];
+  }
 }
 
 function normalizeCorrection(correction) {
@@ -140,12 +217,11 @@ function buildInventoryDeltaMap(sales) {
 function toSalesRow(sale) {
   return {
     id: sale.id,
-    date: sale.date,
+    date: normalizeSaleDateValue(sale.date),
     product: sale.product,
-    branch: sale.branch || null,
     qty: Number(sale.qty || 0),
     price: Number(sale.price || 0),
-    notes: sale.notes || null,
+    notes: encodeSaleNotes(sale.branch, sale.notes),
     inventory_item_id:
       sale.inventoryItemId === undefined || sale.inventoryItemId === null
         ? null
@@ -154,7 +230,8 @@ function toSalesRow(sale) {
     inventory_qty:
       sale.inventoryQty === undefined || sale.inventoryQty === null
         ? null
-        : Number(sale.inventoryQty)
+        : Number(sale.inventoryQty),
+    created_at: typeof sale.createdAt === "string" && sale.createdAt ? sale.createdAt : new Date().toISOString()
   };
 }
 
@@ -170,7 +247,7 @@ function normalizeSaleForStorage(sale) {
 }
 
 export function SalesProvider({ children }) {
-  const { setInventory } = useInventory();
+  const { setInventory, retryInventorySync, inventorySyncError } = useInventory();
   const [extraSalesState, setExtraSalesState] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -202,6 +279,56 @@ export function SalesProvider({ children }) {
   const [isLoadingSales, setIsLoadingSales] = useState(hasSupabaseConfig);
   const [salesSyncError, setSalesSyncError] = useState("");
   const remoteLoadedRef = useRef(false);
+  const lastSyncedSalesRef = useRef(readStoredSalesSnapshot());
+  const syncRetryTimerRef = useRef(null);
+  const [isOnline, setIsOnline] = useState(() => {
+    if (typeof navigator === "undefined") return true;
+    return navigator.onLine;
+  });
+
+  const applyRemoteSalesSnapshot = useCallback((items) => {
+    const normalizedRemote = normalizeSales(items);
+    setExtraSalesState((current) => mergeSalesSnapshots(normalizedRemote, current));
+    lastSyncedSalesRef.current = normalizedRemote;
+    localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(normalizedRemote));
+  }, []);
+
+  const syncSales = useCallback(
+    async (previousItems, nextItems) => {
+      if (!hasSupabaseConfig || !supabase || !remoteLoadedRef.current) return;
+
+      const nextById = new Map(nextItems.map((sale) => [String(sale.id), sale]));
+      const removedIds = previousItems
+        .filter((sale) => !nextById.has(String(sale.id)))
+        .map((sale) => sale.id);
+
+      try {
+        if (removedIds.length > 0) {
+          const { error: deleteError } = await supabase.from(SALES_TABLE).delete().in("id", removedIds);
+          if (deleteError) throw deleteError;
+        }
+
+        if (nextItems.length > 0) {
+          const rows = nextItems.map(toSalesRow);
+          const { error: upsertError } = await supabase
+            .from(SALES_TABLE)
+            .upsert(rows, { onConflict: "id" });
+
+          if (upsertError) throw upsertError;
+        }
+
+        lastSyncedSalesRef.current = nextItems;
+        localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(nextItems));
+        setSalesSyncError("");
+      } catch (error) {
+        console.error("Sales sync failed:", error);
+        setSalesSyncError(
+          `Sales changes were saved locally, but Supabase sync failed for "${SALES_TABLE}". ${error?.message || ""}`.trim()
+        );
+      }
+    },
+    []
+  );
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(extraSalesState));
@@ -210,6 +337,21 @@ export function SalesProvider({ children }) {
   useEffect(() => {
     localStorage.setItem(CORRECTIONS_KEY, JSON.stringify(saleCorrections));
   }, [saleCorrections]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -239,7 +381,17 @@ export function SalesProvider({ children }) {
       }
 
       if (Array.isArray(data)) {
-        setExtraSalesState(normalizeSales(data));
+        const normalizedRemote = normalizeSales(data);
+        setExtraSalesState((current) => {
+          const merged = mergeSalesSnapshots(normalizedRemote, current);
+          if (JSON.stringify(merged) !== JSON.stringify(normalizedRemote)) {
+            remoteLoadedRef.current = true;
+            void syncSales(normalizedRemote, merged);
+          }
+          return merged;
+        });
+        lastSyncedSalesRef.current = normalizedRemote;
+        localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(normalizedRemote));
         setSalesSyncError("");
       }
 
@@ -252,42 +404,43 @@ export function SalesProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [applyRemoteSalesSnapshot, syncSales]);
 
-  const syncSales = useCallback(
-    async (previousItems, nextItems) => {
-      if (!hasSupabaseConfig || !supabase || !remoteLoadedRef.current) return;
+  useEffect(() => {
+    if (!hasSupabaseConfig || !supabase) return undefined;
 
-      const nextById = new Map(nextItems.map((sale) => [String(sale.id), sale]));
-      const removedIds = previousItems
-        .filter((sale) => !nextById.has(String(sale.id)))
-        .map((sale) => sale.id);
+    const channel = supabase
+      .channel(`sales-records-${SALES_TABLE}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: SALES_TABLE },
+        async () => {
+          if (!isOnline) return;
 
-      try {
-        if (removedIds.length > 0) {
-          const { error: deleteError } = await supabase.from(SALES_TABLE).delete().in("id", removedIds);
-          if (deleteError) throw deleteError;
+          try {
+            const { data, error } = await supabase
+              .from(SALES_TABLE)
+              .select("*")
+              .order("created_at", { ascending: false });
+
+            if (error) throw error;
+            if (Array.isArray(data)) {
+              applyRemoteSalesSnapshot(data);
+              setSalesSyncError("");
+            }
+          } catch (error) {
+            setSalesSyncError(
+              `Sales database updates could not be refreshed from "${SALES_TABLE}". ${error?.message || ""}`.trim()
+            );
+          }
         }
+      )
+      .subscribe();
 
-        if (nextItems.length > 0) {
-          const rows = nextItems.map(toSalesRow);
-          const { error: upsertError } = await supabase
-            .from(SALES_TABLE)
-            .upsert(rows, { onConflict: "id" });
-
-          if (upsertError) throw upsertError;
-        }
-
-        setSalesSyncError("");
-      } catch (error) {
-        console.error("Sales sync failed:", error);
-        setSalesSyncError(
-          `Sales changes were saved locally, but Supabase sync failed for "${SALES_TABLE}". ${error?.message || ""}`.trim()
-        );
-      }
-    },
-    []
-  );
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [applyRemoteSalesSnapshot, isOnline]);
 
   const adjustInventoryForSales = useCallback(
     (sales, direction) => {
@@ -320,18 +473,66 @@ export function SalesProvider({ children }) {
         const nextItems = typeof value === "function" ? value(current) : value;
         const normalizedNext = normalizeSales(nextItems);
 
-        if (remoteLoadedRef.current) {
+        if (remoteLoadedRef.current && isOnline) {
           void syncSales(current, normalizedNext);
         }
 
         return normalizedNext;
       });
     },
-    [syncSales]
+    [isOnline, syncSales]
   );
 
+  const retrySalesSync = useCallback(() => {
+    if (!remoteLoadedRef.current || !hasSupabaseConfig || !supabase) return;
+
+    const lastSyncedSnapshot = lastSyncedSalesRef.current || [];
+    const currentSnapshot = normalizeSales(extraSalesState);
+    if (JSON.stringify(lastSyncedSnapshot) === JSON.stringify(currentSnapshot)) return;
+
+    return syncSales(lastSyncedSnapshot, currentSnapshot);
+  }, [extraSalesState, syncSales]);
+
+  const scheduleConsistencyRetry = useCallback(() => {
+    if (!hasSupabaseConfig || !supabase || !isOnline || !remoteLoadedRef.current) return;
+
+    if (syncRetryTimerRef.current) {
+      clearTimeout(syncRetryTimerRef.current);
+    }
+
+    syncRetryTimerRef.current = setTimeout(() => {
+      void retryInventorySync?.();
+      void retrySalesSync();
+    }, 250);
+  }, [isOnline, retryInventorySync, retrySalesSync]);
+
+  useEffect(() => {
+    if (!isOnline || !remoteLoadedRef.current) return undefined;
+    if (!salesSyncError && !inventorySyncError) return undefined;
+
+    scheduleConsistencyRetry();
+    return undefined;
+  }, [inventorySyncError, isOnline, salesSyncError, scheduleConsistencyRetry]);
+
+  useEffect(() => {
+    return () => {
+      if (syncRetryTimerRef.current) {
+        clearTimeout(syncRetryTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!remoteLoadedRef.current || !hasSupabaseConfig || !supabase || !isOnline) return;
+
+    const lastSyncedSnapshot = lastSyncedSalesRef.current || [];
+    if (JSON.stringify(lastSyncedSnapshot) === JSON.stringify(extraSalesState)) return;
+
+    void syncSales(lastSyncedSnapshot, extraSalesState);
+  }, [extraSalesState, isOnline, syncSales]);
+
   const salesHistory = useMemo(() => {
-    return extraSalesState;
+    return sortSalesDescending(extraSalesState);
   }, [extraSalesState]);
 
   const totalRevenue = useMemo(() => {
@@ -361,8 +562,10 @@ export function SalesProvider({ children }) {
 
         return [...batchItems, ...prev];
       });
+
+      scheduleConsistencyRetry();
     },
-    [adjustInventoryForSales, setExtraSales]
+    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
   );
 
   const addSale = useCallback(
@@ -375,7 +578,8 @@ export function SalesProvider({ children }) {
   const clearRecordedSales = useCallback(() => {
     adjustInventoryForSales(extraSalesState, 1);
     setExtraSales([]);
-  }, [adjustInventoryForSales, extraSalesState, setExtraSales]);
+    scheduleConsistencyRetry();
+  }, [adjustInventoryForSales, extraSalesState, scheduleConsistencyRetry, setExtraSales]);
 
   const deleteSaleRecord = useCallback(
     (saleId) => {
@@ -390,9 +594,10 @@ export function SalesProvider({ children }) {
 
       if (removedSale) {
         adjustInventoryForSales([removedSale], 1);
+        scheduleConsistencyRetry();
       }
     },
-    [adjustInventoryForSales, setExtraSales]
+    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
   );
 
   const undoLastSale = useCallback(
@@ -415,9 +620,10 @@ export function SalesProvider({ children }) {
 
       if (removedSale) {
         adjustInventoryForSales([removedSale], 1);
+        scheduleConsistencyRetry();
       }
     },
-    [adjustInventoryForSales, setExtraSales]
+    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
   );
 
   const voidLastSale = useCallback(
@@ -459,11 +665,12 @@ export function SalesProvider({ children }) {
           },
           ...current
         ]);
+        scheduleConsistencyRetry();
       }
 
       return removedSale;
     },
-    [adjustInventoryForSales, setExtraSales]
+    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
   );
 
   const correctSaleRecord = useCallback(
@@ -527,11 +734,12 @@ export function SalesProvider({ children }) {
           },
           ...current
         ]);
+        scheduleConsistencyRetry();
       }
 
       return correctedSale;
     },
-    [adjustInventoryForSales, setExtraSales]
+    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
   );
 
   const value = useMemo(() => {
@@ -547,7 +755,8 @@ export function SalesProvider({ children }) {
       saleCorrections,
       totalRevenue,
       isLoadingSales,
-      salesSyncError
+      salesSyncError,
+      retrySalesSync
     };
   }, [
     salesHistory,
@@ -561,7 +770,8 @@ export function SalesProvider({ children }) {
     saleCorrections,
     totalRevenue,
     isLoadingSales,
-    salesSyncError
+    salesSyncError,
+    retrySalesSync
   ]);
 
   return <SalesContext.Provider value={value}>{children}</SalesContext.Provider>;

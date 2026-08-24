@@ -19,6 +19,7 @@ import {
 const InventoryContext = createContext(null);
 const STORAGE_KEY = "smart_inventory_items";
 const HISTORY_STORAGE_KEY = "smart_inventory_history";
+const LAST_SYNC_KEY = "smart_inventory_items_last_synced";
 const ITEM_CODE_SCHEMA_KEY = "smart_inventory_item_code_schema_version";
 const ITEM_CODE_SCHEMA_VERSION = 3;
 const INVENTORY_TABLE = import.meta.env.VITE_SUPABASE_INVENTORY_TABLE || "inventory_items";
@@ -90,6 +91,54 @@ function normalizeItem(item) {
 function normalizeInventory(items) {
   if (!Array.isArray(items)) return [];
   return items.map(normalizeItem).filter(Boolean);
+}
+
+function mergeInventorySnapshots(remoteItems, localItems) {
+  const mergedById = new Map();
+
+  [...normalizeInventory(remoteItems), ...normalizeInventory(localItems)].forEach((item) => {
+    mergedById.set(String(item.id), item);
+  });
+
+  return [...mergedById.values()];
+}
+
+function readStoredInventorySnapshot() {
+  const stored = localStorage.getItem(LAST_SYNC_KEY);
+  if (!stored) return [];
+
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? normalizeInventory(parsed) : [];
+  } catch {
+    return [];
+  }
+}
+
+function getInventoryTimestamp(item) {
+  const value = item?.updatedAt || item?.updatedat || "";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getTime();
+}
+
+function itemSnapshot(item) {
+  if (!item) return null;
+  return JSON.stringify({
+    id: item.id,
+    name: item.name,
+    code: item.code,
+    category: item.category,
+    unit: item.unit,
+    stock: Number(item.stock ?? 0),
+    threshold: Number(item.threshold ?? 0),
+    price: Number(item.price ?? 0),
+    minStock: item.minStock ?? null,
+    maxStock: item.maxStock ?? null
+  });
+}
+
+function sameInventoryItem(left, right) {
+  return itemSnapshot(left) === itemSnapshot(right);
 }
 
 function resequenceItemCodes(items) {
@@ -298,17 +347,152 @@ export function InventoryProvider({ children }) {
   const [isLoadingInventory, setIsLoadingInventory] = useState(hasSupabaseConfig);
   const [inventorySyncError, setInventorySyncError] = useState("");
   const remoteLoadedRef = useRef(false);
+  const lastSyncedInventoryRef = useRef(readStoredInventorySnapshot());
+  const inventoryStateRef = useRef(inventoryState);
+  const conflictResolutionRef = useRef(new Map());
+  const conflictPayloadRef = useRef(new Map());
+  const [isOnline, setIsOnline] = useState(() => {
+    if (typeof navigator === "undefined") return true;
+    return navigator.onLine;
+  });
+
+  useEffect(() => {
+    inventoryStateRef.current = inventoryState;
+  }, [inventoryState]);
 
   const syncInventory = useCallback(
     async (previousItems, nextItems) => {
-      if (!hasSupabaseConfig || !supabase || !remoteLoadedRef.current) return;
-
-      const nextById = new Map(nextItems.map((item) => [String(item.id), item]));
-      const removedIds = previousItems
-        .filter((item) => !nextById.has(String(item.id)))
-        .map((item) => item.id);
+      if (!hasSupabaseConfig || !supabase || !remoteLoadedRef.current) return false;
 
       try {
+        const { data: remoteData, error: loadError } = await supabase
+          .from(INVENTORY_TABLE)
+          .select("*")
+          .order("id", { ascending: true });
+
+        if (loadError) throw loadError;
+
+        const baseItems = normalizeInventory(previousItems);
+        const localItems = normalizeInventory(nextItems);
+        const remoteItems = normalizeInventory(remoteData);
+
+        const baseById = new Map(baseItems.map((item) => [String(item.id), item]));
+        const localById = new Map(localItems.map((item) => [String(item.id), item]));
+        const remoteById = new Map(remoteItems.map((item) => [String(item.id), item]));
+        const allIds = new Set([
+          ...baseById.keys(),
+          ...localById.keys(),
+          ...remoteById.keys()
+        ]);
+
+        const resolvedLocalItems = [];
+        const resolvedRemoteItems = [];
+        const upsertRows = [];
+        const removedIds = [];
+        const conflictIds = [];
+        const resolvedConflictIds = [];
+
+        for (const id of allIds) {
+          const baseItem = baseById.get(id) || null;
+          const localItem = localById.get(id) || null;
+          const remoteItem = remoteById.get(id) || null;
+          const localChanged = !sameInventoryItem(localItem, baseItem);
+          const remoteChanged = !sameInventoryItem(remoteItem, baseItem);
+          const conflictKey = `inventory-conflict-${id}`;
+          const forcedResolution = conflictResolutionRef.current.get(id) || "";
+
+          if (forcedResolution === "remote") {
+            if (remoteItem) {
+              resolvedLocalItems.push(remoteItem);
+              resolvedRemoteItems.push(remoteItem);
+              upsertRows.push(toInventoryRow(remoteItem));
+            } else {
+              removedIds.push(id);
+            }
+            resolvedConflictIds.push(id);
+            conflictResolutionRef.current.delete(id);
+            continue;
+          }
+
+          if (forcedResolution === "local") {
+            if (localItem) {
+              resolvedLocalItems.push(localItem);
+              resolvedRemoteItems.push(localItem);
+              upsertRows.push(toInventoryRow(localItem));
+            } else {
+              removedIds.push(id);
+            }
+            resolvedConflictIds.push(id);
+            conflictResolutionRef.current.delete(id);
+            continue;
+          }
+
+          if (localChanged && remoteChanged && !sameInventoryItem(localItem, remoteItem)) {
+            const localWins = getInventoryTimestamp(localItem) >= getInventoryTimestamp(remoteItem);
+            const chosen = localWins ? localItem : remoteItem;
+            conflictPayloadRef.current.set(conflictKey, {
+              itemId: id,
+              payload: {
+                baseItem,
+                localItem,
+                remoteItem
+              }
+            });
+
+            conflictIds.push(id);
+
+            if (chosen) {
+              resolvedLocalItems.push(chosen);
+              resolvedRemoteItems.push(chosen);
+              upsertRows.push(toInventoryRow(chosen));
+            } else {
+              removedIds.push(id);
+            }
+            continue;
+          }
+
+          if (localItem && !remoteChanged) {
+            resolvedLocalItems.push(localItem);
+            resolvedRemoteItems.push(localItem);
+            if (!sameInventoryItem(localItem, baseItem)) {
+              upsertRows.push(toInventoryRow(localItem));
+            }
+            continue;
+          }
+
+          if (!localItem && remoteItem && !localChanged) {
+            resolvedLocalItems.push(remoteItem);
+            resolvedRemoteItems.push(remoteItem);
+            continue;
+          }
+
+          if (!localItem && remoteItem && remoteChanged) {
+            resolvedLocalItems.push(remoteItem);
+            resolvedRemoteItems.push(remoteItem);
+            continue;
+          }
+
+          if (localItem && !remoteItem && !localChanged) {
+            removedIds.push(id);
+            continue;
+          }
+
+          if (localItem && !remoteItem && localChanged) {
+            resolvedLocalItems.push(localItem);
+            resolvedRemoteItems.push(localItem);
+            upsertRows.push(toInventoryRow(localItem));
+            continue;
+          }
+
+          if (remoteItem) {
+            resolvedLocalItems.push(remoteItem);
+            resolvedRemoteItems.push(remoteItem);
+          } else if (localItem) {
+            resolvedLocalItems.push(localItem);
+            resolvedRemoteItems.push(localItem);
+          }
+        }
+
         if (removedIds.length > 0) {
           const { error: deleteError } = await supabase
             .from(INVENTORY_TABLE)
@@ -318,27 +502,65 @@ export function InventoryProvider({ children }) {
           if (deleteError) throw deleteError;
         }
 
-        if (nextItems.length > 0) {
-          const rows = nextItems.map(toInventoryRow);
+        if (upsertRows.length > 0) {
           const { error: upsertError } = await supabase
             .from(INVENTORY_TABLE)
-            .upsert(rows, { onConflict: "id" });
+            .upsert(upsertRows, { onConflict: "id" });
 
           if (upsertError) throw upsertError;
         }
 
-        setInventorySyncError("");
+        const finalSnapshot =
+          resolvedRemoteItems.length > 0
+            ? resequenceItemCodes(normalizeInventory(resolvedRemoteItems))
+            : [];
+
+        lastSyncedInventoryRef.current = finalSnapshot;
+        localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(finalSnapshot));
+        resolvedConflictIds.forEach((id) => {
+          conflictPayloadRef.current.delete(`inventory-conflict-${id}`);
+        });
+        conflictIds.forEach((id) => {
+          if (!resolvedConflictIds.includes(id)) {
+            conflictPayloadRef.current.delete(`inventory-conflict-${id}`);
+          }
+        });
+
+        const nextState =
+          resolvedLocalItems.length > 0
+            ? resequenceItemCodes(normalizeInventory(resolvedLocalItems))
+            : [];
+        if (!sameInventoryItemArray(nextState, inventoryStateRef.current)) {
+          setInventoryState(nextState);
+        }
+
+        if (conflictIds.length > 0) {
+          setInventorySyncError(
+            `Inventory synced with ${conflictIds.length} conflict${conflictIds.length === 1 ? "" : "s"} left for review.`
+          );
+        } else {
+          setInventorySyncError("");
+        }
+
+        return conflictIds.length === 0;
       } catch (error) {
-        // Surface the actual failure so we can fix the backend instead of guessing.
         console.error("Inventory sync failed:", error);
-        // Keep local changes even if the remote write fails.
         setInventorySyncError(
           `Inventory changes were saved locally, but Supabase sync failed for "${INVENTORY_TABLE}". ${error?.message || "Check the browser console for the Supabase error."}`
         );
+        return false;
       }
     },
-    []
+    [inventoryStateRef]
   );
+
+  function sameInventoryItemArray(left, right) {
+    if (left.length !== right.length) return false;
+    for (let index = 0; index < left.length; index += 1) {
+      if (!sameInventoryItem(left[index], right[index])) return false;
+    }
+    return true;
+  }
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(inventoryState));
@@ -347,6 +569,21 @@ export function InventoryProvider({ children }) {
   useEffect(() => {
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(inventoryHistoryState));
   }, [inventoryHistoryState]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -377,12 +614,17 @@ export function InventoryProvider({ children }) {
 
       if (Array.isArray(data)) {
         const normalized = normalizeInventory(data);
+        const mergedSnapshot = mergeInventorySnapshots(normalized, inventoryStateRef.current || []);
         const schemaVersion = Number(localStorage.getItem(ITEM_CODE_SCHEMA_KEY) || "0");
         const nextItems =
-          schemaVersion >= ITEM_CODE_SCHEMA_VERSION ? normalized : resequenceItemCodes(normalized);
+          schemaVersion >= ITEM_CODE_SCHEMA_VERSION
+            ? mergedSnapshot
+            : resequenceItemCodes(mergedSnapshot);
 
         setInventoryState(nextItems);
         setInventorySyncError("");
+        lastSyncedInventoryRef.current = normalized;
+        localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(normalized));
 
         if (schemaVersion < ITEM_CODE_SCHEMA_VERSION) {
           localStorage.setItem(ITEM_CODE_SCHEMA_KEY, String(ITEM_CODE_SCHEMA_VERSION));
@@ -404,6 +646,16 @@ export function InventoryProvider({ children }) {
     };
   }, [syncInventory]);
 
+  const flushInventorySync = useCallback(() => {
+    if (!remoteLoadedRef.current || !hasSupabaseConfig || !supabase || !isOnline) return;
+
+    const lastSyncedSnapshot = lastSyncedInventoryRef.current || [];
+    const currentSnapshot = inventoryStateRef.current || [];
+    if (JSON.stringify(lastSyncedSnapshot) === JSON.stringify(currentSnapshot)) return;
+
+    return syncInventory(lastSyncedSnapshot, currentSnapshot);
+  }, [isOnline, syncInventory]);
+
   const setInventory = useCallback(
     (value) => {
       setInventoryState((current) => {
@@ -418,14 +670,41 @@ export function InventoryProvider({ children }) {
           ].slice(0, HISTORY_LIMIT));
         }
 
-        if (remoteLoadedRef.current) {
+        if (remoteLoadedRef.current && isOnline) {
           void syncInventory(current, normalizedNext);
         }
 
         return normalizedNext;
       });
     },
-    [syncInventory]
+    [isOnline, syncInventory]
+  );
+
+  const resolveInventoryConflict = useCallback(
+    (itemId, resolution) => {
+      const conflictKey = `inventory-conflict-${String(itemId)}`;
+      const conflictEntry = conflictPayloadRef.current.get(conflictKey) || null;
+
+      if (!conflictEntry || !conflictEntry.payload) return false;
+
+      const { localItem, remoteItem } = conflictEntry.payload;
+
+      if (resolution === "remote") {
+        conflictResolutionRef.current.set(String(itemId), "remote");
+        if (remoteItem) {
+          setInventoryState((current) =>
+            current.map((item) => (String(item.id) === String(itemId) ? remoteItem : item))
+          );
+        }
+      } else {
+        conflictResolutionRef.current.set(String(itemId), "local");
+      }
+
+      conflictPayloadRef.current.delete(conflictKey);
+      flushInventorySync();
+      return Boolean(localItem || remoteItem);
+    },
+    [flushInventorySync]
   );
 
   const value = useMemo(() => {
@@ -433,10 +712,20 @@ export function InventoryProvider({ children }) {
       inventory: inventoryState,
       inventoryHistory: inventoryHistoryState,
       setInventory,
+      retryInventorySync: flushInventorySync,
+      resolveInventoryConflict,
       isLoadingInventory,
       inventorySyncError
     };
-  }, [inventoryState, inventoryHistoryState, setInventory, isLoadingInventory, inventorySyncError]);
+  }, [
+    inventoryState,
+    inventoryHistoryState,
+    setInventory,
+    flushInventorySync,
+    resolveInventoryConflict,
+    isLoadingInventory,
+    inventorySyncError
+  ]);
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
 }

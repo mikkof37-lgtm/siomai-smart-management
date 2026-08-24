@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 const SALES_TABLE = globalThis.process?.env?.SUPABASE_SALES_TABLE ||
   globalThis.process?.env?.VITE_SUPABASE_SALES_TABLE ||
   "sales_records";
+const SALE_BRANCH_PREFIX = "__smart_inventory_branch__:";
 const TIMEZONE_OFFSET_HOURS = Number(globalThis.process?.env?.REPORT_TIMEZONE_OFFSET_HOURS || 8);
 
 function readJsonBody(req) {
@@ -88,10 +89,35 @@ function normalizeBranch(branch) {
   return typeof branch === "string" && branch.trim() ? branch.trim() : "Unassigned";
 }
 
+function decodeSaleNotes(notes) {
+  const text = typeof notes === "string" ? notes : "";
+  if (!text.startsWith(SALE_BRANCH_PREFIX)) {
+    return { branch: "", notes: text };
+  }
+
+  const remainder = text.slice(SALE_BRANCH_PREFIX.length);
+  const newlineIndex = remainder.indexOf("\n");
+  const branchToken = newlineIndex >= 0 ? remainder.slice(0, newlineIndex) : remainder;
+  const cleanedNotes = newlineIndex >= 0 ? remainder.slice(newlineIndex + 1) : "";
+
+  try {
+    return {
+      branch: decodeURIComponent(branchToken),
+      notes: cleanedNotes
+    };
+  } catch {
+    return {
+      branch: branchToken,
+      notes: cleanedNotes
+    };
+  }
+}
+
 function normalizeSale(sale) {
+  const decodedNotes = decodeSaleNotes(sale.notes);
   return {
     id: String(sale.id ?? sale.sale_id ?? ""),
-    branch: normalizeBranch(sale.branch),
+    branch: normalizeBranch(sale.branch || decodedNotes.branch),
     product:
       typeof sale.inventory_item_name === "string" && sale.inventory_item_name.trim()
         ? sale.inventory_item_name.trim()
@@ -100,6 +126,7 @@ function normalizeSale(sale) {
         : "Unknown item",
     qty: Number(sale.qty || 0),
     price: Number(sale.price || 0),
+    notes: decodedNotes.notes,
     createdAt:
       typeof sale.created_at === "string"
         ? sale.created_at
@@ -355,7 +382,7 @@ export default async function handler(req, res) {
     const { startUtc, endUtc, reportDateLabel, windowLabel } = getReportWindow(new Date());
     const { data, error } = await supabase
       .from(SALES_TABLE)
-      .select("id, branch, product, qty, price, created_at, inventory_item_name")
+      .select("id, product, qty, price, created_at, inventory_item_name, notes")
       .gte("created_at", startUtc.toISOString())
       .lt("created_at", endUtc.toISOString())
       .order("created_at", { ascending: true });

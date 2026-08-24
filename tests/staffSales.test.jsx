@@ -88,9 +88,9 @@ describe("StaffSales sale entry flow", () => {
     const branchSelect = screen.getByLabelText("Branch");
     const firstProductInput = screen.getByLabelText("Product");
     const firstQtyInput = screen.getByLabelText("Qty");
-    const notesInput = screen.getByPlaceholderText("Optional notes for this receipt");
+    const notesInput = screen.getByPlaceholderText("Optional notes for this sale");
     const addItemButton = screen.getByRole("button", { name: "Add item" });
-    const submitButton = screen.getByRole("button", { name: "Finalize and Send Receipt" });
+    const submitButton = screen.getByRole("button", { name: "Record Sale" });
 
     await waitFor(() => {
       expect(branchSelect).toHaveValue("Talavera 2");
@@ -116,6 +116,7 @@ describe("StaffSales sale entry flow", () => {
     const batch = salesMock.addSalesBatch.mock.calls[0][0];
     expect(batch).toHaveLength(2);
     expect(batch[0]).toMatchObject({
+      date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       branch: "Talavera 2",
       product: "Chili Garlic Sauce (Gallon)",
       qty: 2,
@@ -135,13 +136,6 @@ describe("StaffSales sale entry flow", () => {
       inventoryQty: 0.003
     });
     expect(batch[1].price).toBeCloseTo(16 / 3, 5);
-    expect(fetch).toHaveBeenCalledTimes(1);
-    expect(fetch).toHaveBeenCalledWith(
-      "/api/sale-receipt",
-      expect.objectContaining({
-        method: "POST"
-      })
-    );
     await waitFor(() => {
       expect(screen.getByLabelText("Branch")).toHaveValue("Talavera 2");
       expect(screen.getAllByLabelText("Product")[0]).toHaveValue("");
@@ -149,15 +143,13 @@ describe("StaffSales sale entry flow", () => {
       expect(screen.getAllByRole("spinbutton")[0]).toHaveValue(1);
       expect(notesInput).toHaveValue("");
     });
-    expect(await screen.findByText("Receipt sent for Talavera 2.")).toBeInTheDocument();
+    expect(await screen.findByText("Sale saved for Talavera 2.")).toBeInTheDocument();
   });
 
   test("corrects a specific recent sale line item", async () => {
     const user = userEvent.setup();
 
     render(<StaffSales currentUser={currentUser} onLogout={vi.fn()} />);
-
-    await screen.findByRole("heading", { name: "Finalize Receipt" });
 
     await waitFor(() => {
       expect(screen.getByLabelText("Branch")).toHaveValue("Talavera 2");

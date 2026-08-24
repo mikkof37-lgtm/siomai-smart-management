@@ -41,29 +41,37 @@ export default function ForecastChart() {
   }, [salesHistory]);
 
   return (
-    <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-      <div className="mb-4">
-        <h2 className="text-sm font-semibold text-[#2b2018]">Recent Revenue</h2>
+    <div className="rounded-[28px] border border-[var(--surface-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,247,0.9)_100%)] p-5 shadow-[var(--shadow-soft)]">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+            Revenue rhythm
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--app-text)]">Recent Revenue</h2>
+        </div>
+        <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-semibold text-[#b85d11]">
+          Live sales
+        </span>
       </div>
       <div className="h-64">
         {revenueData.length === 0 ? (
-          <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-[#efe6dc] bg-[#fffaf5] text-sm text-[#9a8b7d]">
+          <div className="flex h-full items-center justify-center rounded-[24px] border border-dashed border-[var(--surface-border)] bg-[#fffaf8] text-sm text-[var(--surface-muted)]">
             No sales recorded yet.
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={revenueData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="4 6" stroke="#efe6dc" />
-              <XAxis dataKey="date" tick={{ fill: "#a28f80", fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="4 6" stroke="rgba(97,72,56,0.12)" />
+              <XAxis dataKey="date" tick={{ fill: "#8f7a6a", fontSize: 12 }} />
               <YAxis
-                tick={{ fill: "#a28f80", fontSize: 12 }}
+                tick={{ fill: "#8f7a6a", fontSize: 12 }}
                 tickFormatter={(value) => `PHP ${value}`}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#ffffff",
+                  backgroundColor: "#fffdfb",
                   borderRadius: 12,
-                  borderColor: "#efe6dc",
+                  borderColor: "rgba(97,72,56,0.12)",
                   fontSize: 12
                 }}
                 formatter={(value) => [`PHP ${value}`, "Revenue"]}
@@ -71,9 +79,9 @@ export default function ForecastChart() {
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke="#ff7a1a"
+                stroke="#f46f1a"
                 strokeWidth={3}
-                dot={{ r: 4, fill: "#ff7a1a" }}
+                dot={{ r: 4, fill: "#f46f1a" }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>

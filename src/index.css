@@ -1,36 +1,91 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
   font-family: "Manrope", "Segoe UI", sans-serif;
-  --app-bg: #fbf8f4;
-  --app-text: #2b2018;
-  --surface-bg: rgba(255, 255, 255, 0.94);
-  --surface-border: #efe6dc;
-  --surface-muted: #8c7b6d;
-  --sidebar-bg: #221813;
-  --sidebar-border: #2f2119;
+  --font-display: "Space Grotesk", "Manrope", "Segoe UI", sans-serif;
+  --app-bg: #f5efe8;
+  --app-bg-top: #fffaf4;
+  --app-bg-bottom: #f4ede5;
+  --app-text: #231913;
+  --surface-bg: rgba(255, 252, 248, 0.9);
+  --surface-border: rgba(97, 72, 56, 0.12);
+  --surface-muted: #79695c;
+  --sidebar-bg: #1d140f;
+  --sidebar-border: #2d2018;
   --sidebar-text: #f7f1ea;
-  --sidebar-muted: #d1c3b6;
+  --sidebar-muted: #cfbfb0;
+  --accent: #f46f1a;
+  --accent-soft: #fff0e2;
+  --shadow-soft: 0 22px 60px -34px rgba(52, 33, 20, 0.35);
   color-scheme: light;
 }
 
 [data-theme="dark"] {
-  --app-bg: #120d0b;
-  --app-text: #f5ece3;
-  --surface-bg: rgba(34, 24, 19, 0.94);
-  --surface-border: #443329;
-  --surface-muted: #b59e8d;
-  --sidebar-bg: #1c130f;
-  --sidebar-border: #34241c;
+  --app-bg: #0f0b09;
+  --app-bg-top: #14100d;
+  --app-bg-bottom: #0f0b09;
+  --app-text: #f6ece3;
+  --surface-bg: rgba(28, 20, 16, 0.9);
+  --surface-border: rgba(244, 111, 26, 0.16);
+  --surface-muted: #b79f91;
+  --sidebar-bg: #140e0a;
+  --sidebar-border: #2d2018;
   --sidebar-text: #f7f1ea;
-  --sidebar-muted: #c8b5a8;
+  --sidebar-muted: #cab6a8;
+  --accent: #ff8a3b;
+  --accent-soft: rgba(255, 138, 59, 0.12);
+  --shadow-soft: 0 22px 60px -34px rgba(0, 0, 0, 0.6);
   color-scheme: dark;
 }
 
+html {
+  background:
+    radial-gradient(circle at top left, rgba(255, 188, 128, 0.18), transparent 30%),
+    radial-gradient(circle at top right, rgba(255, 239, 220, 0.8), transparent 24%),
+    linear-gradient(180deg, var(--app-bg-top) 0%, var(--app-bg) 44%, var(--app-bg-bottom) 100%);
+}
+
 body {
-  background: var(--app-bg);
+  background:
+    radial-gradient(circle at top left, rgba(255, 201, 150, 0.22), transparent 26%),
+    radial-gradient(circle at 90% 10%, rgba(255, 245, 235, 0.9), transparent 18%),
+    linear-gradient(180deg, var(--app-bg-top) 0%, var(--app-bg) 40%, var(--app-bg-bottom) 100%);
   color: var(--app-text);
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.34) 1px, transparent 1px);
+  background-size: 18px 18px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.32), transparent 80%);
+  opacity: 0.18;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgba(244, 111, 26, 0.22);
+  color: var(--app-text);
+}
+
+#root {
+  min-height: 100vh;
 }

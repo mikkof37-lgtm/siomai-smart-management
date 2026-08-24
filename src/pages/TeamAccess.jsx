@@ -185,7 +185,7 @@ export default function TeamAccess({ onLogout, currentUser }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--app-bg)]">
+    <div className="flex min-h-screen flex-col bg-[var(--app-bg)] md:flex-row">
       <Sidebar currentUser={currentUser} />
       <div className="flex-1">
         <TopBar
@@ -195,7 +195,7 @@ export default function TeamAccess({ onLogout, currentUser }) {
           currentUser={currentUser}
         />
 
-        <div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
+        <div className="px-4 pb-28 pt-4 sm:px-6 sm:pb-28 sm:pt-6 lg:px-8">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
               <p className="text-sm text-[#8c7b6d]">Current role</p>

@@ -33,7 +33,7 @@ export default function RestockOrders({ onLogout, currentUser }) {
   const totalSuggested = attentionItems.reduce((sum, item) => sum + item.suggestedOrder, 0);
 
   return (
-    <div className="flex min-h-screen bg-[var(--app-bg)]">
+    <div className="flex min-h-screen flex-col bg-[var(--app-bg)] md:flex-row">
       <Sidebar currentUser={currentUser} />
       <div className="flex-1">
         <TopBar
@@ -42,7 +42,7 @@ export default function RestockOrders({ onLogout, currentUser }) {
           onLogout={onLogout}
           currentUser={currentUser}
         />
-        <div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
+        <div className="px-4 pb-28 pt-4 sm:px-6 sm:pb-28 sm:pt-6 lg:px-8">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="mb-2 text-2xl font-semibold text-[#2b2018]">Restock Orders</h1>

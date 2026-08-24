@@ -10,9 +10,13 @@ import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 import {
   formatInventoryQuantityForDisplay,
   getSaleInventoryQuantity,
-  getSaleQuantityUnitLabel,
   isSiomaiItem
 } from "../utils/siomaiUnits";
+import {
+  formatSaleDate,
+  normalizeSaleDateValue,
+  saleDateKey
+} from "../utils/salesDates";
 
 const formatCurrency = (value) =>
   `PHP ${Number(value || 0).toLocaleString(undefined, {
@@ -25,16 +29,6 @@ const toDateInputValue = (date = new Date()) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-};
-
-const formatDisplayDate = (dateValue) => {
-  const parsed = new Date(dateValue);
-  if (Number.isNaN(parsed.getTime())) return dateValue;
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric"
-  });
 };
 
 const normalizeText = (value) =>
@@ -93,16 +87,19 @@ const getBranchLabel = (value) => {
   return branch?.label || value || "All branches";
 };
 
-const getUserDisplayName = (user) =>
-  user?.user_metadata?.full_name ||
-  user?.user_metadata?.name ||
-  user?.email ||
-  "Staff";
-
 export default function StaffSales({ onLogout, currentUser }) {
-  const { inventory } = useInventory();
-  const { salesHistory, addSalesBatch, correctSaleRecord, saleCorrections } = useSales();
-  const [receiptDraft, setReceiptDraft] = useState(() => createReceiptDraft(""));
+  const { inventory, inventorySyncError } = useInventory();
+  const {
+    salesHistory,
+    addSalesBatch,
+    correctSaleRecord,
+    saleCorrections,
+    isLoadingSales,
+    salesSyncError
+  } = useSales();
+  const [receiptDraft, setReceiptDraft] = useState(() =>
+    createReceiptDraft(getUserDefaultBranch(currentUser) || "")
+  );
   const [recordError, setRecordError] = useState("");
   const [recordSuccess, setRecordSuccess] = useState("");
   const [correctionDraft, setCorrectionDraft] = useState(null);
@@ -111,19 +108,7 @@ export default function StaffSales({ onLogout, currentUser }) {
   const correctionPanelRef = useRef(null);
 
   const defaultBranch = getUserDefaultBranch(currentUser);
-  const todayLabel = formatDisplayDate(new Date());
-  const staffDisplayName = getUserDisplayName(currentUser);
-
-  useEffect(() => {
-    if (!defaultBranch) return;
-    setReceiptDraft((prev) => {
-      if (prev.branch) return prev;
-      return {
-        ...prev,
-        branch: defaultBranch
-      };
-    });
-  }, [defaultBranch]);
+  const todayKey = saleDateKey(new Date());
 
   useEffect(() => {
     if (!focusProductLineId) return;
@@ -132,13 +117,8 @@ export default function StaffSales({ onLogout, currentUser }) {
     if (input) {
       input.focus();
       input.select?.();
-      setFocusProductLineId("");
     }
-  }, [focusProductLineId, receiptDraft.items.length]);
-
-  useEffect(() => {
-    setCorrectionDraft(null);
-  }, [receiptDraft.branch]);
+  }, [focusProductLineId]);
 
   useEffect(() => {
     if (!correctionDraft) return;
@@ -207,8 +187,8 @@ export default function StaffSales({ onLogout, currentUser }) {
       ? salesHistory.filter((sale) => (sale.branch || "").trim() === branch)
       : salesHistory;
 
-    return scoped.filter((sale) => sale.date === todayLabel);
-  }, [receiptDraft.branch, salesHistory, todayLabel]);
+    return scoped.filter((sale) => saleDateKey(sale.date) === todayKey);
+  }, [receiptDraft.branch, salesHistory, todayKey]);
 
   const branchSalesTotal = useMemo(() => {
     return branchSales.reduce((sum, sale) => sum + Number(sale.qty || 0) * Number(sale.price || 0), 0);
@@ -386,7 +366,7 @@ export default function StaffSales({ onLogout, currentUser }) {
     });
   };
 
-  const handleFinalizeReceipt = async (e) => {
+  const handleFinalizeSale = (e) => {
     e.preventDefault();
     setRecordError("");
     setRecordSuccess("");
@@ -402,7 +382,7 @@ export default function StaffSales({ onLogout, currentUser }) {
     }
 
     if (!requestedLines.length) {
-      setRecordError("Please add at least one item to the receipt.");
+      setRecordError("Please add at least one item to the sale.");
       return;
     }
 
@@ -466,7 +446,7 @@ export default function StaffSales({ onLogout, currentUser }) {
     const recordedAt = new Date().toISOString();
     const saleRecords = resolvedLines.map((line, index) => ({
       id: `${batchId}-${index}`,
-      date: formatDisplayDate(saleDate),
+      date: normalizeSaleDateValue(saleDate),
       branch,
       product: line.product,
       qty: line.qty,
@@ -479,59 +459,7 @@ export default function StaffSales({ onLogout, currentUser }) {
     }));
 
     addSalesBatch(saleRecords);
-
-    const receiptItems = resolvedLines.map((line) => ({
-      name: line.inventoryItem.name || line.product,
-      qty: line.qty,
-      unit: getSaleQuantityUnitLabel(line.inventoryItem, line.unit),
-      unitPrice: line.price,
-      subtotal: Number(line.qty || 0) * Number(line.price || 0)
-    }));
-
-    try {
-      const response = await fetch("/api/sale-receipt", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          saleId: batchId,
-          branch,
-          saleDate: formatDisplayDate(saleDate),
-          recordedAt,
-          staffName: staffDisplayName,
-          items: receiptItems,
-          total: saleRecords.reduce(
-            (sum, record) => sum + Number(record.qty || 0) * Number(record.price || 0),
-            0
-          ),
-          notes
-        })
-      });
-
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload?.detail || payload?.error || `Receipt request failed (${response.status})`);
-      }
-
-      if (payload?.sent) {
-        setRecordSuccess(`Receipt sent for ${getBranchLabel(branch)}.`);
-        setRecordError("");
-      } else if (payload?.skipped) {
-        setRecordSuccess(
-          `Sale saved for ${getBranchLabel(branch)}. Receipt email skipped: ${
-            payload?.error || "SMTP is not configured."
-          }`
-        );
-        setRecordError("");
-      } else {
-        setRecordSuccess(`Sale saved for ${getBranchLabel(branch)}.`);
-        setRecordError("");
-      }
-    } catch (error) {
-      setRecordSuccess(`Sale saved for ${getBranchLabel(branch)}.`);
-      setRecordError(`Receipt email failed: ${error?.message || "Unknown error"}`);
-    }
+    setRecordSuccess(`Sale saved for ${getBranchLabel(branch)}.`);
 
     setReceiptDraft(createReceiptDraft(defaultBranch || ""));
   };
@@ -541,76 +469,109 @@ export default function StaffSales({ onLogout, currentUser }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--app-bg)]">
+    <div className="flex min-h-screen flex-col bg-[linear-gradient(180deg,#fff8f1_0%,#f6efe7_42%,#efe7de_100%)] md:flex-row">
       <Sidebar currentUser={currentUser} />
 
       <div className="flex-1">
         <TopBar
           title="Staff Sales"
-          subtitle="Batch branch sales, send a receipt, and keep the shift record clean."
+          subtitle="Record branch sales and keep stock in sync."
           onLogout={onLogout}
           currentUser={currentUser}
         />
 
-        <div className="px-4 pb-8 pt-4 sm:px-6 sm:pb-10 sm:pt-6 lg:px-8">
-          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-[24px] border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-[#8c7b6d]">Branch</p>
-                <span className="rounded-full bg-[#fff1e3] px-3 py-1 text-[11px] font-semibold text-[#c96f15]">
-                  Today
-                </span>
+        <div className="px-4 pb-28 pt-4 sm:px-6 sm:pb-28 sm:pt-6 lg:px-8">
+          {(isLoadingSales || salesSyncError || inventorySyncError) && (
+            <div
+              className={[
+                "mb-6 rounded-2xl border px-4 py-3 text-sm shadow-sm",
+                salesSyncError || inventorySyncError
+                  ? "border-[#ffd5d0] bg-[#fff4f2] text-[#b0483b]"
+                  : "border-[#dcefd8] bg-[#f2fbef] text-[#3c7a2c]"
+              ].join(" ")}
+            >
+              <div className="font-semibold">
+                {isLoadingSales ? "Checking sales database" : "Sales database status"}
               </div>
-              <p className="mt-3 text-2xl font-semibold text-[#2b2018]">
-                {getBranchLabel(receiptDraft.branch)}
-              </p>
-              <p className="mt-1 text-sm text-[#8c7b6d]">
-                Build one receipt with multiple sold items before sending it.
-              </p>
+              <div className="mt-1">
+                {salesSyncError ||
+                  inventorySyncError ||
+                  "Connected to the sales database. Updates sync in real time."}
+              </div>
             </div>
+          )}
 
-            <div className="rounded-[24px] border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm font-medium text-[#8c7b6d]">Receipt Total</p>
-              <p className="mt-3 text-2xl font-semibold text-[#2b2018]">
-                {formatCurrency(receiptTotal)}
-              </p>
-              <p className="mt-1 text-sm text-[#8c7b6d]">Current draft only</p>
-            </div>
+          <div className="mb-6 overflow-hidden rounded-[28px] border border-[rgba(97,72,56,0.12)] bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(255,249,243,0.95)_56%,rgba(255,239,223,0.92)_100%)] shadow-[var(--shadow-soft)]">
+            <div className="grid gap-5 px-6 py-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:items-center">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85d11]">
+                  Shift terminal
+                </div>
+                <h1 className="text-3xl font-semibold text-[var(--app-text)] sm:text-4xl">
+                  Record shift sales without losing the ledger.
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--surface-muted)]">
+                  Pick the branch, add the items, and save the batch without losing track of stock.
+                </p>
+              </div>
 
-            <div className="rounded-[24px] border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm font-medium text-[#8c7b6d]">Transactions</p>
-              <p className="mt-3 text-2xl font-semibold text-[#2b2018]">{branchSalesCount}</p>
-              <p className="mt-1 text-sm text-[#8c7b6d]">Recorded today</p>
-            </div>
-
-            <div className="rounded-[24px] border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm font-medium text-[#8c7b6d]">Low Stock Items</p>
-              <p className="mt-3 text-2xl font-semibold text-[#c35f18]">{lowStockItems.length}</p>
-              <p className="mt-1 text-sm text-[#8c7b6d]">Need attention soon</p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                    Branch
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-[var(--app-text)]">
+                    {getBranchLabel(receiptDraft.branch) || "Unassigned"}
+                  </p>
+                </div>
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                    Draft total
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-[var(--app-text)]">{formatCurrency(receiptTotal)}</p>
+                </div>
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                    Today
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-[#b85d11]">{branchSalesCount}</p>
+                </div>
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                    Attention
+                  </p>
+                  <p className="mt-2 text-xl font-semibold text-[#b85d11]">{lowStockItems.length}</p>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
             <div className="space-y-6">
-              <div className="overflow-hidden rounded-[28px] border border-[#efe6dc] bg-white shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-                <div className="border-b border-[#f2eae0] bg-[linear-gradient(135deg,#fffefc_0%,#fff8f1_55%,#fff1e3_100%)] px-6 py-5">
+              <div className="overflow-hidden rounded-[28px] border border-[rgba(97,72,56,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,250,245,0.94)_100%)] shadow-[var(--shadow-soft)]">
+                <div className="border-b border-[rgba(97,72,56,0.08)] bg-[linear-gradient(135deg,rgba(255,251,248,0.96)_0%,rgba(255,244,233,0.95)_60%,rgba(255,236,220,0.92)_100%)] px-6 py-5">
                   <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h1 className="text-2xl font-semibold text-[#2b2018]">Finalize Receipt</h1>
-                      <p className="mt-1 text-sm text-[#8c7b6d]">
-                        Add every item in the branch sale, then send one receipt.
+                      <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--accent-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85d11]">
+                        Entry panel
+                      </div>
+                      <h1 className="text-2xl font-semibold text-[var(--app-text)]">Sale entry</h1>
+                      <p className="mt-1 text-sm text-[var(--surface-muted)]">
+                        Add every item in the branch sale, then send it to the ledger.
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-[#f0dfd0] bg-white px-4 py-3 shadow-sm">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
+                    <div className="rounded-2xl border border-[rgba(97,72,56,0.12)] bg-white px-4 py-3 shadow-[0_12px_30px_-24px_rgba(58,41,29,0.35)]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
                         Shift date
                       </p>
-                      <p className="text-sm font-semibold text-[#2b2018]">{todayLabel}</p>
+                      <p className="text-sm font-semibold text-[var(--app-text)]">
+                        {formatSaleDate(todayKey)}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                <form onSubmit={handleFinalizeReceipt} className="space-y-6 px-6 py-6">
+                <form onSubmit={handleFinalizeSale} className="space-y-6 px-6 py-6">
                   <div>
                     <label htmlFor="branch-select" className="text-sm font-medium text-[#5a4a3f]">
                       Branch
@@ -621,7 +582,10 @@ export default function StaffSales({ onLogout, currentUser }) {
                           key={branch.value}
                           type="button"
                           onClick={() =>
-                            setReceiptDraft((prev) => ({ ...prev, branch: branch.value }))
+                            {
+                              setReceiptDraft((prev) => ({ ...prev, branch: branch.value }));
+                              setCorrectionDraft(null);
+                            }
                           }
                           className={[
                             "rounded-full border px-4 py-2 text-sm font-semibold transition",
@@ -634,11 +598,14 @@ export default function StaffSales({ onLogout, currentUser }) {
                         </button>
                       ))}
                     </div>
-                    <select
+                      <select
                       id="branch-select"
                       value={receiptDraft.branch}
                       onChange={(e) =>
-                        setReceiptDraft((prev) => ({ ...prev, branch: e.target.value }))
+                        {
+                          setReceiptDraft((prev) => ({ ...prev, branch: e.target.value }));
+                          setCorrectionDraft(null);
+                        }
                       }
                       className="mt-3 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
                     >
@@ -667,18 +634,18 @@ export default function StaffSales({ onLogout, currentUser }) {
                       />
                     </div>
                     <div>
-                      <label htmlFor="receipt-notes" className="text-sm font-medium text-[#5a4a3f]">
+                      <label htmlFor="sale-notes" className="text-sm font-medium text-[#5a4a3f]">
                         Notes
                       </label>
                       <input
-                        id="receipt-notes"
+                        id="sale-notes"
                         type="text"
                         value={receiptDraft.notes}
                         onChange={(e) =>
                           setReceiptDraft((prev) => ({ ...prev, notes: e.target.value }))
                         }
                         className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-                        placeholder="Optional notes for this receipt"
+                        placeholder="Optional notes for this sale"
                       />
                     </div>
                   </div>
@@ -688,7 +655,7 @@ export default function StaffSales({ onLogout, currentUser }) {
                       <div>
                         <h2 className="text-lg font-semibold text-[#2b2018]">Sold Items</h2>
                         <p className="mt-1 text-sm text-[#8c7b6d]">
-                          Add all items for this branch receipt before sending.
+                          Add all items for this branch sale before recording.
                         </p>
                       </div>
                       <button
@@ -827,8 +794,60 @@ export default function StaffSales({ onLogout, currentUser }) {
                           type="submit"
                           className="rounded-xl bg-[#ff7a1a] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00]"
                         >
-                          Finalize and Send Receipt
+                          Record Sale
                         </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 rounded-[24px] border border-dashed border-[#e8d9cb] bg-[#fffaf5] px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
+                          Branch snapshot
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#2b2018]">
+                          Quick read before you record the batch
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#c35f18]">
+                        Live
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
+                          Sales today
+                        </p>
+                        <p className="mt-1 text-lg font-semibold text-[#ff7a1a]">
+                          {formatCurrency(branchSalesTotal)}
+                        </p>
+                        <p className="text-xs text-[#9a8b7d]">
+                          {branchSalesCount} recorded {branchSalesCount === 1 ? "sale" : "sales"}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
+                          Recent entries
+                        </p>
+                        <p className="mt-1 text-lg font-semibold text-[#2b2018]">
+                          {recentSales.length}
+                        </p>
+                        <p className="text-xs text-[#9a8b7d]">
+                          Ready for corrections
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
+                          Low stock
+                        </p>
+                        <p className="mt-1 text-lg font-semibold text-[#2b2018]">
+                          {lowStockItems.length}
+                        </p>
+                        <p className="text-xs text-[#9a8b7d]">
+                          Items needing attention
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -840,9 +859,9 @@ export default function StaffSales({ onLogout, currentUser }) {
               <div className="rounded-[28px] border border-[#efe6dc] bg-white p-6 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-[#2b2018]">Receipt Preview</h2>
+                    <h2 className="text-lg font-semibold text-[#2b2018]">Sale preview</h2>
                     <p className="mt-1 text-sm text-[#8c7b6d]">
-                      This is the batch that will be emailed for {getBranchLabel(receiptDraft.branch)}.
+                      This batch will be saved for {getBranchLabel(receiptDraft.branch)}.
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -865,7 +884,7 @@ export default function StaffSales({ onLogout, currentUser }) {
                   )}
                   <div className="flex items-center justify-between rounded-2xl bg-[#fffaf5] px-4 py-3">
                     <div>
-                      <p className="text-sm font-semibold text-[#2b2018]">Today's Revenue</p>
+                      <p className="text-sm font-semibold text-[#2b2018]">Today&apos;s total</p>
                       <p className="text-xs text-[#9a8b7d]">Selected branch only</p>
                     </div>
                     <p className="text-base font-semibold text-[#ff7a1a]">
@@ -874,7 +893,7 @@ export default function StaffSales({ onLogout, currentUser }) {
                   </div>
                   <div className="flex items-center justify-between rounded-2xl bg-[#fffaf5] px-4 py-3">
                     <div>
-                      <p className="text-sm font-semibold text-[#2b2018]">Top Item</p>
+                      <p className="text-sm font-semibold text-[#2b2018]">Top item</p>
                       <p className="text-xs text-[#9a8b7d]">Most sold today</p>
                     </div>
                     <p className="text-sm font-semibold text-[#2b2018]">
@@ -883,11 +902,11 @@ export default function StaffSales({ onLogout, currentUser }) {
                   </div>
                   <div className="rounded-2xl border border-dashed border-[#e8d9cb] px-4 py-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
-                      Receipt items
+                      Batch items
                     </p>
                     <div className="mt-3 space-y-2">
                       {lineItems.filter((line) => line.product.trim()).length === 0 && (
-                        <p className="text-sm text-[#9a8b7d]">No items added yet.</p>
+                        <p className="text-sm text-[#9a8b7d]">Nothing added yet.</p>
                       )}
                       {lineItems
                         .filter((line) => line.product.trim())
@@ -917,9 +936,9 @@ export default function StaffSales({ onLogout, currentUser }) {
               <div className="rounded-[28px] border border-[#efe6dc] bg-white p-6 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-[#2b2018]">Recent Sales</h2>
+                    <h2 className="text-lg font-semibold text-[#2b2018]">Recent sales</h2>
                     <p className="mt-1 text-sm text-[#8c7b6d]">
-                      Latest entries tied to the selected branch.
+                      Latest entries for the selected branch.
                     </p>
                   </div>
                   <span className="rounded-full bg-[#fff1e3] px-3 py-1 text-[11px] font-semibold text-[#c96f15]">
@@ -955,10 +974,10 @@ export default function StaffSales({ onLogout, currentUser }) {
                           <div className="min-w-0">
                             <p className="font-semibold text-[#2b2018]">{sale.product}</p>
                             <p className="mt-1 text-xs text-[#9a8b7d]">
-                              {sale.branch || "Unassigned branch"} - {sale.date}
+                              {sale.branch || "Unassigned branch"} - {formatSaleDate(sale.date)}
                             </p>
                             <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#c35f18]">
-                              Tap to correct
+                              Tap to fix
                             </p>
                           </div>
                           <div className="shrink-0 text-right">
@@ -982,12 +1001,12 @@ export default function StaffSales({ onLogout, currentUser }) {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
-                        Correction
+                        Fix a line item
                       </p>
                       <p className="mt-1 text-sm font-semibold text-[#2b2018]">
                         {correctionDraft
                           ? "Edit the selected line item and save the fix"
-                          : "Choose a recent sale line item to correct"}
+                          : "Choose a recent sale line item to edit"}
                       </p>
                     </div>
                     <span className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[#c35f18]">
@@ -1012,10 +1031,11 @@ export default function StaffSales({ onLogout, currentUser }) {
                           htmlFor="correction-product"
                           className="text-sm font-medium text-[#5a4a3f]"
                         >
-                          Correction Product
+                          Product
                         </label>
                         <select
                           id="correction-product"
+                          aria-label="Correction Product"
                           value={correctionDraft.product}
                           onChange={(e) =>
                             setCorrectionDraft((prev) =>
@@ -1038,10 +1058,11 @@ export default function StaffSales({ onLogout, currentUser }) {
                           htmlFor="correction-qty"
                           className="text-sm font-medium text-[#5a4a3f]"
                         >
-                          Correction Qty
+                          Qty
                         </label>
                         <input
                           id="correction-qty"
+                          aria-label="Correction Qty"
                           type="number"
                           min="1"
                           step="1"
@@ -1059,10 +1080,11 @@ export default function StaffSales({ onLogout, currentUser }) {
 
                       <div>
                         <label htmlFor="correction-reason" className="text-sm font-medium text-[#5a4a3f]">
-                          Reason for correction
+                          Reason
                         </label>
                         <input
                           id="correction-reason"
+                          aria-label="Reason for correction"
                           type="text"
                           value={correctionDraft.reason}
                           onChange={(e) =>
@@ -1078,10 +1100,11 @@ export default function StaffSales({ onLogout, currentUser }) {
                       <div className="flex flex-col gap-3 sm:flex-row">
                         <button
                           type="button"
+                          aria-label="Save correction"
                           onClick={handleApplyCorrection}
                           className="w-full rounded-xl bg-[#ff7a1a] px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00]"
                         >
-                          Save correction
+                          Save fix
                         </button>
                         <button
                           type="button"
@@ -1094,8 +1117,8 @@ export default function StaffSales({ onLogout, currentUser }) {
                     </div>
                   ) : (
                     <p className="mt-3 text-sm text-[#8c7b6d]">
-                      Pick a line item from the recent sales list to correct the product or quantity
-                      without deleting the whole sale.
+                      Pick a line item from recent sales to adjust the product or quantity without
+                      deleting the whole sale.
                     </p>
                   )}
                 </div>
@@ -1103,7 +1126,7 @@ export default function StaffSales({ onLogout, currentUser }) {
                 {saleCorrections.length > 0 && (
                   <div className="mt-5 rounded-2xl border border-dashed border-[#e8d9cb] px-4 py-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
-                      Recent corrections
+                      Recent fixes
                     </p>
                     <div className="mt-3 space-y-2">
                       {saleCorrections.slice(0, 3).map((correction) => (

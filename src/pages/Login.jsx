@@ -7,6 +7,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState("login");
   const [signupForm, setSignupForm] = useState({
     email: "",
@@ -20,22 +22,28 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setIsSubmitting(true);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password
-    });
-    if (signInError) {
-      setError(signInError.message);
-      return;
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password
+      });
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+      sessionStorage.setItem("login_toast", "1");
+      navigate("/", { replace: true });
+    } finally {
+      setIsSubmitting(false);
     }
-    sessionStorage.setItem("login_toast", "1");
-    navigate("/", { replace: true });
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setError("");
+    setIsSubmitting(true);
     const emailValue = signupForm.email.trim();
     const pass = signupForm.password;
     const confirm = signupForm.confirm;
@@ -50,290 +58,376 @@ export default function Login() {
     }
     if (pass !== confirm) {
       setError("Passwords do not match.");
+      setIsSubmitting(false);
       return;
     }
 
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: emailValue,
-      password: pass
-    });
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
+    try {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: emailValue,
+        password: pass
+      });
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+      setSignupForm({ email: "", password: "", confirm: "" });
+      setMode("login");
+      setError("Account created. Please check your email to confirm.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setSignupForm({ email: "", password: "", confirm: "" });
-    setMode("login");
-    setError("Account created. Please check your email to confirm.");
   };
 
   const handleForgot = async (e) => {
     e.preventDefault();
     setError("");
+    setIsSubmitting(true);
     const emailValue = forgotForm.email.trim();
     if (!emailValue) {
       setError("Please enter your email.");
+      setIsSubmitting(false);
       return;
     }
 
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      emailValue,
-      {
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(emailValue, {
         redirectTo: `${window.location.origin}/reset-password`
+      });
+      if (resetError) {
+        setError(resetError.message);
+        return;
       }
-    );
-    if (resetError) {
-      setError(resetError.message);
-      return;
+      setForgotForm({ email: "" });
+      setMode("login");
+      setError("Password reset email sent.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setForgotForm({ email: "" });
-    setMode("login");
-    setError("Password reset email sent.");
   };
 
+  const modeTitle =
+    mode === "login" ? "Welcome back" : mode === "signup" ? "Create account" : "Reset password";
+
+  const modeCopy =
+    mode === "login"
+      ? "Sign in with your work email to access sales, stock, and branch activity."
+      : mode === "signup"
+      ? "Create a team account for your branch or admin role."
+      : "We'll send a reset link to your inbox.";
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-linear-to-b from-[#fbf8f4] via-[#fbf8f4] to-[#f5efe8]">
-      <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#ffd7b0] opacity-50 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-[#ffe9d2] opacity-60 blur-3xl" />
+    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#fff8f1_0%,#f6efe7_46%,#efe7de_100%)]">
+      <div className="pointer-events-none absolute -top-24 -left-28 h-80 w-80 rounded-full bg-[#ffd4aa] opacity-55 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 translate-x-1/3 translate-y-1/4 rounded-full bg-[#ffe9d3] opacity-65 blur-3xl" />
 
-      <div className="relative flex min-h-screen items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md">
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#ff7a1a] text-white shadow-lg shadow-orange-200">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                className="h-7 w-7"
-                aria-hidden="true"
-              >
-                <path
-                  d="M4 10.5 12 5l8 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M8 20v-6h8v6"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-semibold text-[#1f1b16]">
-              Sio Republic Admin
-            </h1>
-            <p className="mt-1 text-sm text-[#7b6b5d]">
-              Sign in to manage your inventory
-            </p>
-          </div>
-
-          <div className="mt-8 rounded-2xl bg-white/90 p-8 shadow-[0_18px_60px_-30px_rgba(91,71,54,0.6)] backdrop-blur">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-[#1f1b16]">
-                {mode === "login" ? "Welcome back" : mode === "signup" ? "Create account" : "Reset password"}
-              </h2>
-              <p className="mt-1 text-sm text-[#8b7a6b]">
-                {mode === "login"
-                  ? "Enter your credentials to access the dashboard"
-                  : mode === "signup"
-                  ? "Set up your admin access."
-                  : "Update your account password."}
+      <div className="relative mx-auto flex min-h-screen w-full max-w-7xl items-center px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid w-full gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="hidden overflow-hidden rounded-[32px] border border-[rgba(97,72,56,0.12)] bg-[linear-gradient(160deg,rgba(32,22,17,0.98)_0%,rgba(54,34,23,0.98)_55%,rgba(17,11,8,0.98)_100%)] p-8 text-white shadow-[0_28px_80px_-40px_rgba(24,15,10,0.72)] lg:flex lg:flex-col lg:justify-between">
+            <div>
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffcb98]">
+                Sio Republic
+              </div>
+              <h1 className="max-w-xl text-4xl font-semibold leading-tight text-white">
+                One workspace for the people running the floor.
+              </h1>
+              <p className="mt-4 max-w-lg text-sm leading-6 text-[#dcc9bd]">
+                Track what sold, what is left, and what needs attention without bouncing between
+                disconnected tools.
               </p>
             </div>
 
-            {mode === "login" && (
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-[#5a4a3f]">
-                    Email
-                  </label>
-                  <input
-                    type="text"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-[#5a4a3f]">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-                  />
-                </div>
-
-                {error && (
-                  <div
-                    className={`text-sm ${
-                      error.toLowerCase().includes("sent") ||
-                      error.toLowerCase().includes("created")
-                        ? "text-green-700"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="mt-2 w-full rounded-xl bg-[#ff7a1a] py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00]"
-                >
-                  Sign In
-                </button>
-              </form>
-            )}
-
-            {mode === "signup" && (
-              <form onSubmit={handleSignup} className="mt-6 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-[#5a4a3f]">
-                    Email
-                  </label>
-                  <input
-                    type="text"
-                    value={signupForm.email}
-                    onChange={(e) =>
-                      setSignupForm((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-                    placeholder="warehouse-admin@email.com"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[#5a4a3f]">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={signupForm.password}
-                    onChange={(e) =>
-                      setSignupForm((prev) => ({ ...prev, password: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-                    placeholder="Create a password"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[#5a4a3f]">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    value={signupForm.confirm}
-                    onChange={(e) =>
-                      setSignupForm((prev) => ({ ...prev, confirm: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-                    placeholder="Repeat your password"
-                  />
-                </div>
-
-                {error && (
-                  <div
-                    className={`text-sm ${
-                      error.toLowerCase().includes("sent") ||
-                      error.toLowerCase().includes("created")
-                        ? "text-green-700"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="mt-2 w-full rounded-xl bg-[#ff7a1a] py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00]"
-                >
-                  Create Account
-                </button>
-              </form>
-            )}
-
-            {mode === "forgot" && (
-              <form onSubmit={handleForgot} className="mt-6 space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-[#5a4a3f]">
-                    Email
-                  </label>
-                  <input
-                    type="text"
-                    value={forgotForm.email}
-                    onChange={(e) =>
-                      setForgotForm((prev) => ({ ...prev, email: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-                    placeholder="you@email.com"
-                  />
-                </div>
-
-                {error && (
-                  <div
-                    className={`text-sm ${
-                      error.toLowerCase().includes("sent") ||
-                      error.toLowerCase().includes("created")
-                        ? "text-green-700"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="mt-2 w-full rounded-xl bg-[#ff7a1a] py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00]"
-                >
-                  Update Password
-                </button>
-              </form>
-            )}
-
-            <div className="mt-5 space-y-2 text-center text-xs text-[#9b8b7c]">
-              {mode === "login" && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError("");
-                      setMode("signup");
-                    }}
-                    className="cursor-pointer text-[#ff7a1a] transition hover:text-[#ff6a00] hover:underline hover:underline-offset-4"
-                  >
-                    Create an account
-                  </button>
+            <div className="border-t border-white/10 pt-6">
+              <div className="grid gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 h-2.5 w-2.5 rounded-full bg-[#ffcb98]" />
                   <div>
+                    <p className="text-sm font-semibold text-white">Fast sales entry</p>
+                    <p className="mt-1 text-sm leading-6 text-[#c5b1a5]">
+                      Record branch sales quickly without losing the batch.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 h-2.5 w-2.5 rounded-full bg-[#ffcb98]" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">Clear stock signals</p>
+                    <p className="mt-1 text-sm leading-6 text-[#c5b1a5]">
+                      See what needs attention before it slows the floor down.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 h-2.5 w-2.5 rounded-full bg-[#ffcb98]" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">Forecasts that help</p>
+                    <p className="mt-1 text-sm leading-6 text-[#c5b1a5]">
+                      Plan the next reorder from recent sales, not guesswork.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center">
+            <div className="w-full max-w-[540px] rounded-[32px] border border-[rgba(97,72,56,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,247,0.92)_100%)] p-6 shadow-[0_28px_80px_-40px_rgba(24,15,10,0.35)] sm:p-8">
+              <div className="flex flex-col items-start gap-6">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f46f1a] text-white shadow-lg shadow-orange-200">
+                    <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden="true">
+                      <path
+                        d="M4 10.5 12 5l8 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M8 20v-6h8v6"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b85d11]">
+                      Sio Republic
+                    </p>
+                    <h2 className="text-2xl font-semibold text-[var(--app-text)]">
+                      Smart Inventory
+                    </h2>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-3xl font-semibold tracking-tight text-[var(--app-text)]">
+                    {modeTitle}
+                  </h3>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-[var(--surface-muted)]">
+                    {modeCopy}
+                  </p>
+                </div>
+
+                {mode === "login" && (
+                  <form onSubmit={handleSubmit} className="w-full space-y-4">
+                    <div>
+                      <label htmlFor="login-email" className="text-sm font-medium text-[#5a4a3f]">
+                        Email
+                      </label>
+                      <input
+                        id="login-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="email"
+                        className="mt-1 w-full rounded-2xl border border-[rgba(97,72,56,0.12)] bg-white px-4 py-3 text-sm text-[#2a211a] outline-none transition focus:border-[#f46f1a] focus:ring-4 focus:ring-[#ffe2c8]"
+                        placeholder="name@company.com"
+                      />
+                      <p className="mt-1 text-xs text-[#9a8b7d]">
+                        Use the email tied to your staff or admin account.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="login-password" className="text-sm font-medium text-[#5a4a3f]">
+                        Password
+                      </label>
+                      <div className="relative mt-1">
+                        <input
+                          id="login-password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          autoComplete="current-password"
+                          className="w-full rounded-2xl border border-[rgba(97,72,56,0.12)] bg-white px-4 py-3 pr-20 text-sm text-[#2a211a] outline-none transition focus:border-[#f46f1a] focus:ring-4 focus:ring-[#ffe2c8]"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute inset-y-0 right-2 my-auto rounded-full px-3 text-xs font-semibold text-[#b85d11] transition hover:text-[#9f4c09]"
+                        >
+                          {showPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <div
+                        className={`rounded-2xl border px-4 py-3 text-sm ${
+                          error.toLowerCase().includes("sent") ||
+                          error.toLowerCase().includes("created")
+                            ? "border-[#dcefd8] bg-[#f4fbf1] text-[#2e7d46]"
+                            : "border-[#ffd6d0] bg-[#fff4f2] text-[#b0483b]"
+                        }`}
+                      >
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full rounded-2xl bg-[#f46f1a] py-3 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ee6310] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isSubmitting ? "Signing in..." : "Sign in"}
+                    </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        setError("");
-                        setMode("forgot");
-                      }}
-                      className="cursor-pointer text-[#ff7a1a] transition hover:text-[#ff6a00] hover:underline hover:underline-offset-4"
+                      onClick={() => setMode("forgot")}
+                      className="w-full text-sm font-semibold text-[#b85d11] transition hover:text-[#9f4c09]"
                     >
-                      Forgot password?
+                      Forgot your password?
                     </button>
-                  </div>
-                </>
-              )}
-              {mode !== "login" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError("");
-                    setMode("login");
-                  }}
-                  className="cursor-pointer text-[#ff7a1a] transition hover:text-[#ff6a00] hover:underline hover:underline-offset-4"
-                >
-                  Back to login
-                </button>
-              )}
+                    <button
+                      type="button"
+                      onClick={() => setMode("signup")}
+                      className="w-full text-sm font-semibold text-[var(--surface-muted)] transition hover:text-[var(--app-text)]"
+                    >
+                      Need a new account?
+                    </button>
+                  </form>
+                )}
+
+                {mode === "signup" && (
+                  <form onSubmit={handleSignup} className="w-full space-y-4">
+                    <div>
+                      <label htmlFor="signup-email" className="text-sm font-medium text-[#5a4a3f]">
+                        Email
+                      </label>
+                      <input
+                        id="signup-email"
+                        type="email"
+                        value={signupForm.email}
+                        onChange={(e) =>
+                          setSignupForm((prev) => ({ ...prev, email: e.target.value }))
+                        }
+                        autoComplete="email"
+                        className="mt-1 w-full rounded-2xl border border-[rgba(97,72,56,0.12)] bg-white px-4 py-3 text-sm text-[#2a211a] outline-none transition focus:border-[#f46f1a] focus:ring-4 focus:ring-[#ffe2c8]"
+                        placeholder="name@company.com"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="signup-password" className="text-sm font-medium text-[#5a4a3f]">
+                        Password
+                      </label>
+                      <div className="relative mt-1">
+                        <input
+                          id="signup-password"
+                          type={showPassword ? "text" : "password"}
+                          value={signupForm.password}
+                          onChange={(e) =>
+                            setSignupForm((prev) => ({ ...prev, password: e.target.value }))
+                          }
+                          autoComplete="new-password"
+                          className="w-full rounded-2xl border border-[rgba(97,72,56,0.12)] bg-white px-4 py-3 pr-20 text-sm text-[#2a211a] outline-none transition focus:border-[#f46f1a] focus:ring-4 focus:ring-[#ffe2c8]"
+                          placeholder="Create a password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          className="absolute inset-y-0 right-2 my-auto rounded-full px-3 text-xs font-semibold text-[#b85d11] transition hover:text-[#9f4c09]"
+                        >
+                          {showPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="signup-confirm" className="text-sm font-medium text-[#5a4a3f]">
+                        Confirm password
+                      </label>
+                      <input
+                        id="signup-confirm"
+                        type={showPassword ? "text" : "password"}
+                        value={signupForm.confirm}
+                        onChange={(e) =>
+                          setSignupForm((prev) => ({ ...prev, confirm: e.target.value }))
+                        }
+                        autoComplete="new-password"
+                        className="mt-1 w-full rounded-2xl border border-[rgba(97,72,56,0.12)] bg-white px-4 py-3 text-sm text-[#2a211a] outline-none transition focus:border-[#f46f1a] focus:ring-4 focus:ring-[#ffe2c8]"
+                        placeholder="Repeat your password"
+                      />
+                    </div>
+
+                    {error && (
+                      <div
+                        className={`rounded-2xl border px-4 py-3 text-sm ${
+                          error.toLowerCase().includes("sent") ||
+                          error.toLowerCase().includes("created")
+                            ? "border-[#dcefd8] bg-[#f4fbf1] text-[#2e7d46]"
+                            : "border-[#ffd6d0] bg-[#fff4f2] text-[#b0483b]"
+                        }`}
+                      >
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full rounded-2xl bg-[#f46f1a] py-3 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ee6310] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isSubmitting ? "Creating..." : "Create account"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("login")}
+                      className="w-full text-sm font-semibold text-[var(--surface-muted)] transition hover:text-[var(--app-text)]"
+                    >
+                      Back to sign in
+                    </button>
+                  </form>
+                )}
+
+                {mode === "forgot" && (
+                  <form onSubmit={handleForgot} className="w-full space-y-4">
+                    <div>
+                      <label htmlFor="reset-email" className="text-sm font-medium text-[#5a4a3f]">
+                        Email
+                      </label>
+                      <input
+                        id="reset-email"
+                        type="email"
+                        value={forgotForm.email}
+                        onChange={(e) =>
+                          setForgotForm((prev) => ({ ...prev, email: e.target.value }))
+                        }
+                        autoComplete="email"
+                        className="mt-1 w-full rounded-2xl border border-[rgba(97,72,56,0.12)] bg-white px-4 py-3 text-sm text-[#2a211a] outline-none transition focus:border-[#f46f1a] focus:ring-4 focus:ring-[#ffe2c8]"
+                        placeholder="name@company.com"
+                      />
+                    </div>
+
+                    {error && (
+                      <div
+                        className={`rounded-2xl border px-4 py-3 text-sm ${
+                          error.toLowerCase().includes("sent") ||
+                          error.toLowerCase().includes("created")
+                            ? "border-[#dcefd8] bg-[#f4fbf1] text-[#2e7d46]"
+                            : "border-[#ffd6d0] bg-[#fff4f2] text-[#b0483b]"
+                        }`}
+                      >
+                        {error}
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full rounded-2xl bg-[#f46f1a] py-3 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ee6310] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isSubmitting ? "Sending..." : "Send reset link"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("login")}
+                      className="w-full text-sm font-semibold text-[var(--surface-muted)] transition hover:text-[var(--app-text)]"
+                    >
+                      Back to sign in
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         </div>
