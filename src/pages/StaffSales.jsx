@@ -95,7 +95,8 @@ export default function StaffSales({ onLogout, currentUser }) {
     correctSaleRecord,
     saleCorrections,
     isLoadingSales,
-    salesSyncError
+    salesSyncError,
+    retrySalesSync
   } = useSales();
   const [receiptDraft, setReceiptDraft] = useState(() =>
     createReceiptDraft(getUserDefaultBranch(currentUser) || "")
@@ -498,6 +499,15 @@ export default function StaffSales({ onLogout, currentUser }) {
                   inventorySyncError ||
                   "Connected to the sales database. Updates sync in real time."}
               </div>
+              {salesSyncError && (
+                <button
+                  type="button"
+                  onClick={() => void retrySalesSync()}
+                  className="mt-3 rounded-lg border border-[#b0483b] px-3 py-1.5 text-xs font-semibold text-[#b0483b] transition hover:bg-[#b0483b] hover:text-white"
+                >
+                  Retry sales sync
+                </button>
+              )}
             </div>
           )}
 

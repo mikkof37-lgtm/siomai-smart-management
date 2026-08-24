@@ -471,16 +471,10 @@ export function SalesProvider({ children }) {
     (value) => {
       setExtraSalesState((current) => {
         const nextItems = typeof value === "function" ? value(current) : value;
-        const normalizedNext = normalizeSales(nextItems);
-
-        if (remoteLoadedRef.current && isOnline) {
-          void syncSales(current, normalizedNext);
-        }
-
-        return normalizedNext;
+        return normalizeSales(nextItems);
       });
     },
-    [isOnline, syncSales]
+    []
   );
 
   const retrySalesSync = useCallback(() => {

@@ -71,7 +71,8 @@ export default function SalesHistory({ onLogout, currentUser }) {
     clearRecordedSales,
     deleteSaleRecord,
     isLoadingSales,
-    salesSyncError
+    salesSyncError,
+    retrySalesSync
   } = useSales();
   const [showRecord, setShowRecord] = useState(false);
   const [filterDate, setFilterDate] = useState("");
@@ -242,6 +243,15 @@ export default function SalesHistory({ onLogout, currentUser }) {
                 <div className="mt-1">
                   {salesSyncError || "Connected to Supabase and showing live sales."}
                 </div>
+                {salesSyncError && (
+                  <button
+                    type="button"
+                    onClick={() => void retrySalesSync()}
+                    className="mt-3 rounded-lg border border-[#b0483b] px-3 py-1.5 text-xs font-semibold text-[#b0483b] transition hover:bg-[#b0483b] hover:text-white"
+                  >
+                    Retry sales sync
+                  </button>
+                )}
               </div>
             )}
 
