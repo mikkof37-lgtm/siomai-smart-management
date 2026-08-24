@@ -24,6 +24,7 @@ const SalesContext = createContext(null);
 const STORAGE_KEY = "smart_inventory_sales";
 const CORRECTIONS_KEY = "smart_inventory_sale_corrections";
 const LAST_SYNC_KEY = "smart_inventory_sales_last_synced";
+const DELETED_IDS_KEY = "smart_inventory_sales_deleted_ids";
 const SALES_TABLE = import.meta.env.VITE_SUPABASE_SALES_TABLE || "sales_records";
 const SALE_BRANCH_PREFIX = "__smart_inventory_branch__:";
 const hasSupabaseConfig =
@@ -111,6 +112,30 @@ function normalizeSale(sale) {
 function normalizeSales(items) {
   if (!Array.isArray(items)) return [];
   return items.map(normalizeSale).filter(Boolean);
+}
+
+function normalizeSaleIdList(items) {
+  if (!Array.isArray(items)) return [];
+
+  return [...new Set(items.map((item) => (typeof item === "string" ? item : String(item))).filter(Boolean))];
+}
+
+function readStoredDeletedSaleIds() {
+  const stored = localStorage.getItem(DELETED_IDS_KEY);
+  if (!stored) return [];
+
+  try {
+    const parsed = JSON.parse(stored);
+    return normalizeSaleIdList(parsed);
+  } catch {
+    return [];
+  }
+}
+
+function filterDeletedSales(items, deletedIds) {
+  if (!Array.isArray(items) || deletedIds.size === 0) return normalizeSales(items);
+
+  return normalizeSales(items).filter((sale) => !deletedIds.has(String(sale.id)));
 }
 
 function getSaleSortTime(sale) {
@@ -276,6 +301,7 @@ export function SalesProvider({ children }) {
     }
     return [];
   });
+  const [deletedSaleIds, setDeletedSaleIds] = useState(() => new Set(readStoredDeletedSaleIds()));
   const [isLoadingSales, setIsLoadingSales] = useState(hasSupabaseConfig);
   const [salesSyncError, setSalesSyncError] = useState("");
   const remoteLoadedRef = useRef(false);
@@ -287,11 +313,11 @@ export function SalesProvider({ children }) {
   });
 
   const applyRemoteSalesSnapshot = useCallback((items) => {
-    const normalizedRemote = normalizeSales(items);
+    const normalizedRemote = filterDeletedSales(items, deletedSaleIds);
     setExtraSalesState((current) => mergeSalesSnapshots(normalizedRemote, current));
     lastSyncedSalesRef.current = normalizedRemote;
     localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(normalizedRemote));
-  }, []);
+  }, [deletedSaleIds]);
 
   const syncSales = useCallback(
     async (previousItems, nextItems) => {
@@ -319,6 +345,13 @@ export function SalesProvider({ children }) {
 
         lastSyncedSalesRef.current = nextItems;
         localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(nextItems));
+        if (removedIds.length > 0) {
+          setDeletedSaleIds((current) => {
+            const nextIds = new Set(current);
+            removedIds.forEach((id) => nextIds.delete(String(id)));
+            return nextIds;
+          });
+        }
         setSalesSyncError("");
       } catch (error) {
         console.error("Sales sync failed:", error);
@@ -337,6 +370,10 @@ export function SalesProvider({ children }) {
   useEffect(() => {
     localStorage.setItem(CORRECTIONS_KEY, JSON.stringify(saleCorrections));
   }, [saleCorrections]);
+
+  useEffect(() => {
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify([...deletedSaleIds]));
+  }, [deletedSaleIds]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -381,7 +418,7 @@ export function SalesProvider({ children }) {
       }
 
       if (Array.isArray(data)) {
-        const normalizedRemote = normalizeSales(data);
+        const normalizedRemote = filterDeletedSales(data, deletedSaleIds);
         setExtraSalesState((current) => {
           const merged = mergeSalesSnapshots(normalizedRemote, current);
           if (JSON.stringify(merged) !== JSON.stringify(normalizedRemote)) {
@@ -404,7 +441,7 @@ export function SalesProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, [applyRemoteSalesSnapshot, syncSales]);
+  }, [applyRemoteSalesSnapshot, deletedSaleIds, syncSales]);
 
   useEffect(() => {
     if (!hasSupabaseConfig || !supabase) return undefined;
@@ -578,9 +615,15 @@ export function SalesProvider({ children }) {
   const deleteSaleRecord = useCallback(
     (saleId) => {
       let removedSale = null;
+      const normalizedSaleId = String(saleId);
+      setDeletedSaleIds((current) => {
+        const nextIds = new Set(current);
+        nextIds.add(normalizedSaleId);
+        return nextIds;
+      });
       setExtraSales((prev) =>
         prev.filter((sale) => {
-          if (sale.id !== saleId) return true;
+          if (String(sale.id) !== normalizedSaleId) return true;
           removedSale = sale;
           return false;
         })
