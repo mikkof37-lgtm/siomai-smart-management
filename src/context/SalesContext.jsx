@@ -314,7 +314,7 @@ export function SalesProvider({ children }) {
 
   const applyRemoteSalesSnapshot = useCallback((items) => {
     const normalizedRemote = filterDeletedSales(items, deletedSaleIds);
-    setExtraSalesState((current) => mergeSalesSnapshots(normalizedRemote, current));
+    setExtraSalesState(normalizedRemote);
     lastSyncedSalesRef.current = normalizedRemote;
     localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(normalizedRemote));
   }, [deletedSaleIds]);
@@ -419,14 +419,7 @@ export function SalesProvider({ children }) {
 
       if (Array.isArray(data)) {
         const normalizedRemote = filterDeletedSales(data, deletedSaleIds);
-        setExtraSalesState((current) => {
-          const merged = mergeSalesSnapshots(normalizedRemote, current);
-          if (JSON.stringify(merged) !== JSON.stringify(normalizedRemote)) {
-            remoteLoadedRef.current = true;
-            void syncSales(normalizedRemote, merged);
-          }
-          return merged;
-        });
+        setExtraSalesState(normalizedRemote);
         lastSyncedSalesRef.current = normalizedRemote;
         localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(normalizedRemote));
         setSalesSyncError("");

@@ -3,15 +3,9 @@ import NotificationBell from "./NotificationBell";
 import { supabase } from "../lib/supabaseClient";
 import { getUserRole } from "../utils/authRoles";
 
-const THEME_STORAGE_KEY = "smart_inventory_theme";
-
 export default function TopBar({ title, subtitle, onLogout, currentUser }) {
   const [sessionUser, setSessionUser] = useState(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === "undefined") return "light";
-    return localStorage.getItem(THEME_STORAGE_KEY) || "light";
-  });
   const accountMenuRef = useRef(null);
   const user = currentUser ?? sessionUser;
   const isRichHeader = Boolean(title || subtitle);
@@ -63,11 +57,6 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
-
   const displayName =
     user?.user_metadata?.full_name ||
     user?.user_metadata?.name ||
@@ -100,9 +89,9 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
   );
 
   const mobileHeader = (
-    <div className="flex items-center justify-between gap-3 rounded-[24px] border border-[var(--surface-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,247,0.9)_100%)] px-4 py-3 shadow-[var(--shadow-soft)]">
+    <div className="flex items-center justify-between gap-3 rounded-[24px] border border-[var(--surface-border)] px-4 py-3 shadow-[var(--shadow-soft)]" style={{ background: "var(--panel-bg)" }}>
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f46f1a] text-white shadow-lg shadow-orange-900/25">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent)] text-white shadow-lg shadow-orange-900/25">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
             <path
               d="M4 10.5 12 5l8 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z"
@@ -138,39 +127,10 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
                 <p className="text-sm font-semibold text-[var(--app-text)]">{displayName}</p>
                 <p className="text-xs text-[var(--surface-muted)]">{displayRole}</p>
               </div>
-              <div className="px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
-                  Appearance
-                </p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTheme("light")}
-                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                      theme === "light"
-                        ? "border-[#ff7a1a] bg-[#fff1e3] text-[#c96f15]"
-                        : "border-[var(--surface-border)] bg-white text-[var(--app-text)] hover:border-[#ffb47b]"
-                    }`}
-                  >
-                    Light
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTheme("dark")}
-                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                      theme === "dark"
-                        ? "border-[#ff7a1a] bg-[#3a261b] text-[#ffb07a]"
-                        : "border-[var(--surface-border)] bg-white text-[var(--app-text)] hover:border-[#ffb47b]"
-                    }`}
-                  >
-                    Dark
-                  </button>
-                </div>
-              </div>
               <button
                 type="button"
                 onClick={onLogout}
-                className="flex w-full items-center gap-2 border-t border-[var(--surface-border)] px-4 py-3 text-left text-sm font-semibold text-[#6f5f52] transition hover:bg-[#fff8f1] hover:text-[#ff7a1a]"
+                className="flex w-full items-center gap-2 border-t border-[var(--surface-border)] px-4 py-3 text-left text-sm font-semibold text-[#6f5f52] transition hover:bg-[var(--accent-soft)] hover:text-[#ff7a1a]"
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
                   <path
@@ -209,9 +169,9 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
   return (
     <div className="px-4 pt-4 sm:px-6 lg:px-8 lg:pt-8">
       {isRichHeader ? (
-        <div className="flex flex-col gap-4 rounded-[28px] border border-[var(--surface-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,247,0.9)_100%)] px-4 py-4 shadow-[var(--shadow-soft)] sm:px-5 sm:py-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-4 rounded-[28px] border border-[var(--surface-border)] px-4 py-4 shadow-[var(--shadow-soft)] sm:px-5 sm:py-5 xl:flex-row xl:items-center xl:justify-between" style={{ background: "var(--panel-bg)" }}>
           <div className="flex min-w-0 flex-1 items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#f46f1a] text-white shadow-lg shadow-orange-900/25 sm:h-12 sm:w-12">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent)] text-white shadow-lg shadow-orange-900/25 sm:h-12 sm:w-12">
               <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
                 <path
                   d="M4 10.5 12 5l8 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z"
@@ -253,39 +213,10 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
                     <p className="text-sm font-semibold text-[var(--app-text)]">{displayName}</p>
                     <p className="text-xs text-[var(--surface-muted)]">{displayRole}</p>
                   </div>
-                  <div className="px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
-                      Appearance
-                    </p>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setTheme("light")}
-                        className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                          theme === "light"
-                            ? "border-[#ff7a1a] bg-[#fff1e3] text-[#c96f15]"
-                            : "border-[var(--surface-border)] bg-white text-[var(--app-text)] hover:border-[#ffb47b]"
-                        }`}
-                      >
-                        Light
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTheme("dark")}
-                        className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                          theme === "dark"
-                            ? "border-[#ff7a1a] bg-[#3a261b] text-[#ffb07a]"
-                            : "border-[var(--surface-border)] bg-white text-[var(--app-text)] hover:border-[#ffb47b]"
-                        }`}
-                      >
-                        Dark
-                      </button>
-                    </div>
-                  </div>
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="flex w-full items-center gap-2 border-t border-[var(--surface-border)] px-4 py-3 text-left text-sm font-semibold text-[#6f5f52] transition hover:bg-[#fff8f1] hover:text-[#ff7a1a]"
+                    className="flex w-full items-center gap-2 border-t border-[var(--surface-border)] px-4 py-3 text-left text-sm font-semibold text-[#6f5f52] transition hover:bg-[var(--accent-soft)] hover:text-[#ff7a1a]"
                   >
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
                       <path
@@ -316,9 +247,9 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 rounded-[28px] border border-[var(--surface-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,247,0.9)_100%)] px-4 py-4 shadow-[var(--shadow-soft)] sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex flex-col gap-3 rounded-[28px] border border-[var(--surface-border)] px-4 py-4 shadow-[var(--shadow-soft)] sm:flex-row sm:items-center sm:justify-between sm:px-5" style={{ background: "var(--panel-bg)" }}>
           <div className="flex min-w-0 items-center gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#f46f1a] text-white shadow-lg shadow-orange-900/25">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--accent)] text-white shadow-lg shadow-orange-900/25">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
                 <path
                   d="M4 10.5 12 5l8 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z"
@@ -357,39 +288,10 @@ export default function TopBar({ title, subtitle, onLogout, currentUser }) {
                     <p className="text-sm font-semibold text-[var(--app-text)]">{displayName}</p>
                     <p className="text-xs text-[var(--surface-muted)]">{displayRole}</p>
                   </div>
-                  <div className="px-4 py-3">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
-                      Appearance
-                    </p>
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setTheme("light")}
-                        className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                          theme === "light"
-                            ? "border-[#ff7a1a] bg-[#fff1e3] text-[#c96f15]"
-                            : "border-[var(--surface-border)] bg-white text-[var(--app-text)] hover:border-[#ffb47b]"
-                        }`}
-                      >
-                        Light
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTheme("dark")}
-                        className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
-                          theme === "dark"
-                            ? "border-[#ff7a1a] bg-[#3a261b] text-[#ffb07a]"
-                            : "border-[var(--surface-border)] bg-white text-[var(--app-text)] hover:border-[#ffb47b]"
-                        }`}
-                      >
-                        Dark
-                      </button>
-                    </div>
-                  </div>
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="flex w-full items-center gap-2 border-t border-[var(--surface-border)] px-4 py-3 text-left text-sm font-semibold text-[#6f5f52] transition hover:bg-[#fff8f1] hover:text-[#ff7a1a]"
+                    className="flex w-full items-center gap-2 border-t border-[var(--surface-border)] px-4 py-3 text-left text-sm font-semibold text-[#6f5f52] transition hover:bg-[var(--accent-soft)] hover:text-[#ff7a1a]"
                   >
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
                       <path

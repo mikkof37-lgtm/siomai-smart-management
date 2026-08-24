@@ -169,7 +169,7 @@ export default function Sidebar({ currentUser }) {
   const visibleNavItems = navItems.filter((item) => item.allow(user));
   const navLabelClassName = isCollapsed ? "max-w-0 opacity-0" : "max-w-[10rem] opacity-100";
   const navIdleClassName =
-    "text-[#d1c3b6] hover:bg-white/6 hover:text-[#fff7f0] hover:shadow-[0_10px_30px_-20px_rgba(0,0,0,0.45)]";
+    "text-[#d1c3b6] hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[#fff7f0] hover:shadow-[0_10px_30px_-20px_rgba(0,0,0,0.45)]";
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, isCollapsed ? "1" : "0");
@@ -186,8 +186,8 @@ export default function Sidebar({ currentUser }) {
           isDesktopCollapsed ? "justify-center px-0 mx-auto w-12 py-3" : "justify-start px-4 py-3",
           isActive
             ? isDesktopCollapsed
-              ? "bg-white/8 text-[#ffb07a] ring-1 ring-[#ff7a1a]/20 shadow-[0_10px_30px_-18px_rgba(255,122,26,0.32)]"
-              : "bg-white/8 text-[#ffb07a] shadow-[0_10px_24px_-18px_rgba(255,122,26,0.28)]"
+              ? "bg-[color:rgba(255,138,59,0.12)] text-[#ffb07a] ring-1 ring-[#ff7a1a]/20 shadow-[0_10px_30px_-18px_rgba(255,122,26,0.32)]"
+              : "bg-[color:rgba(255,138,59,0.12)] text-[#ffb07a] shadow-[0_10px_24px_-18px_rgba(255,122,26,0.28)]"
             : navIdleClassName
         ].join(" ")
       }
@@ -213,15 +213,14 @@ export default function Sidebar({ currentUser }) {
     <aside
       className="hidden shrink-0 border-b md:sticky md:top-0 md:flex md:h-screen md:flex-col md:border-b-0 md:border-r"
       style={{
-        background:
-          "linear-gradient(180deg, rgba(36, 25, 19, 0.98) 0%, rgba(23, 15, 11, 0.98) 100%)",
+        background: "var(--sidebar-bg)",
         borderColor: "var(--sidebar-border)",
         color: "var(--sidebar-text)"
       }}
     >
       <div className="flex items-center justify-between gap-3 px-3 py-3 md:hidden">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#f46f1a] text-white shadow-lg shadow-orange-900/25">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[var(--accent)] text-white shadow-lg shadow-orange-900/25">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
               <path
                 d="M4 10.5 12 5l8 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z"
@@ -260,8 +259,8 @@ export default function Sidebar({ currentUser }) {
                     [
                       "flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-medium transition",
                       isActive
-                        ? "bg-[#3a261b] text-[#ff9a4a] ring-1 ring-[#ff7a1a]/20 shadow-[0_10px_30px_-18px_rgba(255,122,26,0.45)]"
-                        : "text-[#d1c3b6] hover:bg-[#2d1e16] hover:text-[#f5e5d7]"
+                        ? "bg-[color:rgba(255,138,59,0.14)] text-[#ff9a4a] ring-1 ring-[#ff7a1a]/20 shadow-[0_10px_30px_-18px_rgba(255,122,26,0.45)]"
+                        : "text-[#d1c3b6] hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[#f5e5d7]"
                     ].join(" ")
                   }
                 >
@@ -304,7 +303,7 @@ export default function Sidebar({ currentUser }) {
               isCollapsed ? "justify-center pt-8" : "w-auto opacity-100 pr-12"
             }`}
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f46f1a] text-white shadow-lg shadow-orange-900/25">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--accent)] text-white shadow-lg shadow-orange-900/25">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
                 <path
                   d="M4 10.5 12 5l8 5.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9.5Z"

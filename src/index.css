@@ -7,36 +7,23 @@
   --app-bg: #f5efe8;
   --app-bg-top: #fffaf4;
   --app-bg-bottom: #f4ede5;
+  --page-bg: linear-gradient(180deg, #fffaf4 0%, #f5efe8 44%, #f4ede5 100%);
+  --panel-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 251, 247, 0.92) 100%);
+  --panel-bg-strong: rgba(255, 255, 255, 0.96);
+  --control-bg: rgba(255, 255, 255, 0.88);
+  --control-bg-strong: rgba(255, 250, 245, 0.98);
   --app-text: #231913;
   --surface-bg: rgba(255, 252, 248, 0.9);
   --surface-border: rgba(97, 72, 56, 0.12);
   --surface-muted: #79695c;
-  --sidebar-bg: #1d140f;
-  --sidebar-border: #2d2018;
+  --sidebar-bg: linear-gradient(180deg, #221710 0%, #17100c 100%);
+  --sidebar-border: rgba(255, 255, 255, 0.06);
   --sidebar-text: #f7f1ea;
   --sidebar-muted: #cfbfb0;
   --accent: #f46f1a;
   --accent-soft: #fff0e2;
   --shadow-soft: 0 22px 60px -34px rgba(52, 33, 20, 0.35);
   color-scheme: light;
-}
-
-[data-theme="dark"] {
-  --app-bg: #0f0b09;
-  --app-bg-top: #14100d;
-  --app-bg-bottom: #0f0b09;
-  --app-text: #f6ece3;
-  --surface-bg: rgba(28, 20, 16, 0.9);
-  --surface-border: rgba(244, 111, 26, 0.16);
-  --surface-muted: #b79f91;
-  --sidebar-bg: #140e0a;
-  --sidebar-border: #2d2018;
-  --sidebar-text: #f7f1ea;
-  --sidebar-muted: #cab6a8;
-  --accent: #ff8a3b;
-  --accent-soft: rgba(255, 138, 59, 0.12);
-  --shadow-soft: 0 22px 60px -34px rgba(0, 0, 0, 0.6);
-  color-scheme: dark;
 }
 
 html {
@@ -88,4 +75,23 @@ h6 {
 
 #root {
   min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea,
+a,
+aside,
+header,
+main,
+section,
+article,
+div {
+  transition:
+    background-color 180ms ease,
+    background-image 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
 }
