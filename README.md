@@ -76,6 +76,50 @@ Set these environment variables:
 - `SMTP_SECURE` optional, set to `false` if your SMTP provider needs a non-SSL connection
 - `RECEIPT_FROM_EMAIL` optional fallback sender address
 
+## Audit Logs Setup
+
+The audit log page reads from a dedicated Supabase table named `audit_logs` by default.
+It is meant to be your permanent bookkeeping trail, not a temporary browser cache.
+
+Set these environment variables in your deployment or local shell:
+
+- `SUPABASE_URL` or `VITE_SUPABASE_URL`
+- `SUPABASE_ANON_KEY` or `VITE_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_AUDIT_TABLE` optional, defaults to `audit_logs`
+
+In Supabase, make sure the table exists and that the columns match what the app writes:
+
+- `id` text primary key
+- `entity_type` text
+- `entity_id` text
+- `action` text
+- `performed_by` text
+- `performed_by_email` text
+- `performed_at` timestamptz
+- `reason` text
+- `branch` text
+- `source` text
+- `before_data` jsonb
+- `after_data` jsonb
+- `request_id` text
+- `metadata` jsonb
+
+Recommended indexes:
+
+- `(performed_at desc)`
+- `(entity_type, performed_at desc)`
+- `(action, performed_at desc)`
+- `(branch, performed_at desc)`
+
+Recommended policy setup:
+
+- keep RLS enabled if you want to control direct table access
+- allow authenticated admins to read the table if you want direct user-scoped access
+- let the API route handle writes with the service role key
+
+Do not store audit logs only in localStorage. The browser cache is just a fallback when the backend is unavailable.
+
 ## Testing
 
 Run the current test suite with:

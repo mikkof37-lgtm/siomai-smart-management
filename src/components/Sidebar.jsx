@@ -136,6 +136,23 @@ const navItems = [
         />
       </svg>
     )
+  },
+  {
+    label: "Audit Logs",
+    to: "/audit-logs",
+    allow: (user) => isAdminOrOwner(user),
+    icon: (
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none">
+        <path
+          d="M7 4h8l4 4v12H7z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+        <path d="M15 4v4h4" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M10 12h5M10 16h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    )
   }
 ];
 
@@ -213,9 +230,9 @@ export default function Sidebar({ currentUser }) {
     <aside
       className="hidden shrink-0 border-b md:sticky md:top-0 md:flex md:h-screen md:flex-col md:border-b-0 md:border-r"
       style={{
-        background: "var(--sidebar-bg)",
-        borderColor: "var(--sidebar-border)",
-        color: "var(--sidebar-text)"
+        background: "linear-gradient(180deg, #221710 0%, #17100c 100%)",
+        borderColor: "rgba(255, 255, 255, 0.06)",
+        color: "#f7f1ea"
       }}
     >
       <div className="flex items-center justify-between gap-3 px-3 py-3 md:hidden">
@@ -259,8 +276,8 @@ export default function Sidebar({ currentUser }) {
                     [
                       "flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-medium transition",
                       isActive
-                        ? "bg-[color:rgba(255,138,59,0.14)] text-[#ff9a4a] ring-1 ring-[#ff7a1a]/20 shadow-[0_10px_30px_-18px_rgba(255,122,26,0.45)]"
-                        : "text-[#d1c3b6] hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[#f5e5d7]"
+                      ? "bg-[color:rgba(255,138,59,0.14)] text-[#ff9a4a] ring-1 ring-[#ff7a1a]/20 shadow-[0_10px_30px_-18px_rgba(255,122,26,0.45)]"
+                      : "text-[#d1c3b6] hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[#f5e5d7]"
                     ].join(" ")
                   }
                 >

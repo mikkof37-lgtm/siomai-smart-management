@@ -15,6 +15,7 @@ import {
   formatInventoryQuantityForDisplay,
   normalizeSiomaiInventoryItem
 } from "../utils/siomaiUnits";
+import { buildInventoryAuditLogs, queueAuditLogs, flushQueuedAuditLogs } from "../utils/auditTrail";
 
 const InventoryContext = createContext(null);
 const STORAGE_KEY = "smart_inventory_items";
@@ -656,6 +657,25 @@ export function InventoryProvider({ children }) {
     return syncInventory(lastSyncedSnapshot, currentSnapshot);
   }, [isOnline, syncInventory]);
 
+  const flushQueuedInventoryAuditLogs = useCallback(() => {
+    if (!hasSupabaseConfig || !supabase || !isOnline) return;
+
+    void flushQueuedAuditLogs({
+      getAccessToken: async () => {
+        const { data } = await supabase.auth.getSession();
+        return data?.session?.access_token || "";
+      }
+    });
+  }, [isOnline]);
+
+  const recordInventoryAuditLogs = useCallback(
+    (entries) => {
+      queueAuditLogs(entries);
+      flushQueuedInventoryAuditLogs();
+    },
+    [flushQueuedInventoryAuditLogs]
+  );
+
   const setInventory = useCallback(
     (value) => {
       setInventoryState((current) => {
@@ -668,6 +688,13 @@ export function InventoryProvider({ children }) {
             ...historyEntries,
             ...history
           ].slice(0, HISTORY_LIMIT));
+
+          const auditEntries = buildInventoryAuditLogs(current, normalizedNext, {
+            source: "browser"
+          });
+          if (auditEntries.length > 0) {
+            recordInventoryAuditLogs(auditEntries);
+          }
         }
 
         if (remoteLoadedRef.current && isOnline) {

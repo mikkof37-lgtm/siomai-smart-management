@@ -19,6 +19,12 @@ import {
   isSiomaiItem,
   roundSiomaiQuantity
 } from "../utils/siomaiUnits";
+import {
+  buildSaleAuditLog,
+  buildSaleBatchAuditLogs,
+  queueAuditLogs,
+  flushQueuedAuditLogs
+} from "../utils/auditTrail";
 
 const SalesContext = createContext(null);
 const STORAGE_KEY = "smart_inventory_sales";
@@ -144,16 +150,6 @@ function getSaleSortTime(sale) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function mergeSalesSnapshots(remoteItems, localItems) {
-  const mergedById = new Map();
-
-  [...normalizeSales(remoteItems), ...normalizeSales(localItems)].forEach((sale) => {
-    mergedById.set(String(sale.id), sale);
-  });
-
-  return [...mergedById.values()].sort((a, b) => getSaleSortTime(b) - getSaleSortTime(a));
-}
-
 function sortSalesDescending(items) {
   return [...items].sort((a, b) => getSaleSortTime(b) - getSaleSortTime(a));
 }
@@ -239,27 +235,6 @@ function buildInventoryDeltaMap(sales) {
   return deltas;
 }
 
-function toSalesRow(sale) {
-  return {
-    id: sale.id,
-    date: normalizeSaleDateValue(sale.date),
-    product: sale.product,
-    qty: Number(sale.qty || 0),
-    price: Number(sale.price || 0),
-    notes: encodeSaleNotes(sale.branch, sale.notes),
-    inventory_item_id:
-      sale.inventoryItemId === undefined || sale.inventoryItemId === null
-        ? null
-        : Number(sale.inventoryItemId),
-    inventory_item_name: sale.inventoryItemName || null,
-    inventory_qty:
-      sale.inventoryQty === undefined || sale.inventoryQty === null
-        ? null
-        : Number(sale.inventoryQty),
-    created_at: typeof sale.createdAt === "string" && sale.createdAt ? sale.createdAt : new Date().toISOString()
-  };
-}
-
 function normalizeSaleForStorage(sale) {
   const normalized = normalizeSale(sale);
   if (!normalized) return null;
@@ -329,18 +304,34 @@ export function SalesProvider({ children }) {
         .map((sale) => sale.id);
 
       try {
-        if (removedIds.length > 0) {
-          const { error: deleteError } = await supabase.from(SALES_TABLE).delete().in("id", removedIds);
-          if (deleteError) throw deleteError;
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token || "";
+        if (!accessToken) {
+          throw new Error("Unable to authenticate the sales sync request.");
         }
 
-        if (nextItems.length > 0) {
-          const rows = nextItems.map(toSalesRow);
-          const { error: upsertError } = await supabase
-            .from(SALES_TABLE)
-            .upsert(rows, { onConflict: "id" });
+        const response = await fetch("/api/sales-sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            previousItems: previousItems.map(normalizeSaleForStorage).filter(Boolean),
+            nextItems: nextItems.map(normalizeSaleForStorage).filter(Boolean)
+          })
+        });
 
-          if (upsertError) throw upsertError;
+        const responseText = await response.text();
+        let payload = {};
+        try {
+          payload = responseText ? JSON.parse(responseText) : {};
+        } catch {
+          payload = { detail: responseText };
+        }
+
+        if (!response.ok) {
+          throw new Error(payload?.detail || payload?.error || "Sales sync failed.");
         }
 
         lastSyncedSalesRef.current = nextItems;
@@ -530,6 +521,25 @@ export function SalesProvider({ children }) {
     }, 250);
   }, [isOnline, retryInventorySync, retrySalesSync]);
 
+  const flushQueuedSaleAuditLogs = useCallback(() => {
+    if (!hasSupabaseConfig || !supabase || !isOnline) return;
+
+    void flushQueuedAuditLogs({
+      getAccessToken: async () => {
+        const { data } = await supabase.auth.getSession();
+        return data?.session?.access_token || "";
+      }
+    });
+  }, [isOnline]);
+
+  const recordSaleAuditLogs = useCallback(
+    (entries) => {
+      queueAuditLogs(entries);
+      flushQueuedSaleAuditLogs();
+    },
+    [flushQueuedSaleAuditLogs]
+  );
+
   useEffect(() => {
     if (!isOnline || !remoteLoadedRef.current) return undefined;
     if (!salesSyncError && !inventorySyncError) return undefined;
@@ -575,6 +585,7 @@ export function SalesProvider({ children }) {
       if (normalizedSales.length === 0) return;
 
       adjustInventoryForSales(normalizedSales, -1);
+      recordSaleAuditLogs(buildSaleBatchAuditLogs(normalizedSales, { source: "browser" }));
 
       setExtraSales((prev) => {
         const batchItems = normalizedSales.map((sale) => ({
@@ -600,6 +611,21 @@ export function SalesProvider({ children }) {
   );
 
   const clearRecordedSales = useCallback(() => {
+    if (extraSalesState.length > 0) {
+      recordSaleAuditLogs([
+        buildSaleAuditLog({
+          action: "cleared",
+          beforeSale: extraSalesState,
+          afterSale: [],
+          branch: "all branches",
+          source: "browser",
+          metadata: {
+            summary: "Cleared recorded sales.",
+            details: `Removed ${extraSalesState.length} sale record${extraSalesState.length === 1 ? "" : "s"}.`
+          }
+        })
+      ]);
+    }
     adjustInventoryForSales(extraSalesState, 1);
     setExtraSales([]);
     scheduleConsistencyRetry();
@@ -607,27 +633,45 @@ export function SalesProvider({ children }) {
 
   const deleteSaleRecord = useCallback(
     (saleId) => {
-      let removedSale = null;
       const normalizedSaleId = String(saleId);
+      const currentSnapshot = normalizeSales(extraSalesState);
+      const removedSale = currentSnapshot.find((sale) => String(sale.id) === normalizedSaleId) || null;
+      const nextSnapshot = currentSnapshot.filter((sale) => String(sale.id) !== normalizedSaleId);
+
+      if (!removedSale) {
+        setDeletedSaleIds((current) => {
+          const nextIds = new Set(current);
+          nextIds.add(normalizedSaleId);
+          return nextIds;
+        });
+        return;
+      }
+
       setDeletedSaleIds((current) => {
         const nextIds = new Set(current);
         nextIds.add(normalizedSaleId);
         return nextIds;
       });
-      setExtraSales((prev) =>
-        prev.filter((sale) => {
-          if (String(sale.id) !== normalizedSaleId) return true;
-          removedSale = sale;
-          return false;
-        })
-      );
+      setExtraSales(nextSnapshot);
 
-      if (removedSale) {
-        adjustInventoryForSales([removedSale], 1);
-        scheduleConsistencyRetry();
-      }
+      adjustInventoryForSales([removedSale], 1);
+      void syncSales(currentSnapshot, nextSnapshot);
+      recordSaleAuditLogs([
+        buildSaleAuditLog({
+          action: "deleted",
+          beforeSale: removedSale,
+          afterSale: null,
+          branch: removedSale.branch || "",
+          source: "browser",
+          metadata: {
+            summary: "Deleted a sale record.",
+            details: `${removedSale.product || "Sale"} for ${Number(removedSale.qty || 0)} units was removed from the ledger.`
+          }
+        })
+      ]);
+      scheduleConsistencyRetry();
     },
-    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
+    [adjustInventoryForSales, extraSalesState, recordSaleAuditLogs, scheduleConsistencyRetry, setExtraSales, syncSales]
   );
 
   const undoLastSale = useCallback(
@@ -650,6 +694,19 @@ export function SalesProvider({ children }) {
 
       if (removedSale) {
         adjustInventoryForSales([removedSale], 1);
+        recordSaleAuditLogs([
+          buildSaleAuditLog({
+            action: "undone",
+            beforeSale: removedSale,
+            afterSale: null,
+            branch: removedSale.branch || normalizedBranch,
+            source: "browser",
+            metadata: {
+              summary: "Undid the latest sale.",
+              details: `${removedSale.product || "Sale"} for ${Number(removedSale.qty || 0)} units was restored to inventory.`
+            }
+          })
+        ]);
         scheduleConsistencyRetry();
       }
     },
@@ -694,6 +751,20 @@ export function SalesProvider({ children }) {
             createdAt: new Date().toISOString()
           },
           ...current
+        ]);
+        recordSaleAuditLogs([
+          buildSaleAuditLog({
+            action: "voided",
+            beforeSale: removedSale,
+            afterSale: null,
+            branch: removedSale.branch || normalizedBranch,
+            reason: normalizedReason,
+            source: "browser",
+            metadata: {
+              summary: "Voided the latest sale.",
+              details: `${removedSale.product || "Sale"} was voided because ${normalizedReason}.`
+            }
+          })
         ]);
         scheduleConsistencyRetry();
       }
@@ -763,6 +834,22 @@ export function SalesProvider({ children }) {
             createdAt: new Date().toISOString()
           },
           ...current
+        ]);
+        recordSaleAuditLogs([
+          buildSaleAuditLog({
+            action: "corrected",
+            beforeSale: previousSale,
+            afterSale: correctedSale,
+            branch: previousSale.branch || correctedSale.branch || "",
+            reason: normalizedReason,
+            source: "browser",
+            metadata: {
+              summary: "Corrected a sale record.",
+              details: `${previousSale.product || "Sale"} was updated to ${correctedSale.product || "sale"} with ${Number(
+                correctedSale.qty || 0
+              )} units because ${normalizedReason}.`
+            }
+          })
         ]);
         scheduleConsistencyRetry();
       }

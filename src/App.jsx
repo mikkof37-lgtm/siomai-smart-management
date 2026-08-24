@@ -5,6 +5,7 @@ import { SettingsProvider } from "./context/SettingsContext";
 import Dashboard from "./pages/Dashboard";
 import Inventory from "./pages/Inventory";
 import SalesHistory from "./pages/SalesHistory";
+import AuditLogs from "./pages/AuditLogs";
 import StaffSales from "./pages/StaffSales";
 import RestockOrders from "./pages/RestockOrders";
 import DemandForecast from "./pages/DemandForecast";
@@ -14,6 +15,7 @@ import ResetPassword from "./pages/ResetPassword";
 import { supabase } from "./lib/supabaseClient";
 import { SalesProvider } from "./context/SalesContext";
 import { canAccessStaffSales, isAdminOrOwner } from "./utils/authRoles";
+import { flushQueuedAuditLogs } from "./utils/auditTrail";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import MobileNav from "./components/MobileNav";
 
@@ -114,6 +116,25 @@ export function AppShell() {
       window.removeEventListener("offline", handleOffline);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isAuthed || !isOnline) return undefined;
+
+    let isMounted = true;
+
+    void flushQueuedAuditLogs({
+      getAccessToken: async () => {
+        const { data } = await supabase.auth.getSession();
+        return data?.session?.access_token || "";
+      }
+    }).catch(() => {
+      if (!isMounted) return;
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthed, isOnline]);
 
   if (!isAuthReady) {
     return (
@@ -228,6 +249,16 @@ export function AppShell() {
           element={
             isAuthed && isAdminOrOwner(currentUser) ? (
               <TeamAccess onLogout={handleLogout} currentUser={currentUser} />
+            ) : (
+              <Navigate to={isAuthed ? "/" : "/login"} replace />
+            )
+          }
+        />
+        <Route
+          path="/audit-logs"
+          element={
+            isAuthed && isAdminOrOwner(currentUser) ? (
+              <AuditLogs onLogout={handleLogout} currentUser={currentUser} />
             ) : (
               <Navigate to={isAuthed ? "/" : "/login"} replace />
             )

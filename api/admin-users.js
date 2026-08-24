@@ -12,6 +12,7 @@ const SUPABASE_ANON_KEY =
   "";
 const SUPABASE_SERVICE_ROLE_KEY =
   globalThis.process?.env?.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
+const AUDIT_TABLE = globalThis.process?.env?.SUPABASE_AUDIT_TABLE?.trim() || "audit_logs";
 
 function readJsonBody(req) {
   if (req.body && typeof req.body === "object") {
@@ -120,6 +121,67 @@ function buildMetadataPatch(currentUser, body) {
   }
 
   return { app_metadata: appMetadata, user_metadata: userMetadata };
+}
+
+function buildUserAuditRow(previousUser, nextUser, actor) {
+  const beforeData = {
+    id: previousUser.id,
+    email: previousUser.email || "",
+    fullName:
+      normalizeText(previousUser?.user_metadata?.full_name) ||
+      normalizeText(previousUser?.user_metadata?.name) ||
+      "",
+    role: getUserRole(previousUser) || "staff",
+    defaultBranch: getUserDefaultBranch(previousUser)
+  };
+
+  const afterData = {
+    id: nextUser.id,
+    email: nextUser.email || "",
+    fullName:
+      normalizeText(nextUser?.user_metadata?.full_name) ||
+      normalizeText(nextUser?.user_metadata?.name) ||
+      "",
+    role: getUserRole(nextUser) || "staff",
+    defaultBranch: getUserDefaultBranch(nextUser)
+  };
+
+  if (JSON.stringify(beforeData) === JSON.stringify(afterData)) {
+    return null;
+  }
+
+  const changes = [];
+  if (beforeData.fullName !== afterData.fullName) {
+    changes.push(`name: ${beforeData.fullName || "unset"} -> ${afterData.fullName || "unset"}`);
+  }
+  if (beforeData.role !== afterData.role) {
+    changes.push(`role: ${beforeData.role || "unset"} -> ${afterData.role || "unset"}`);
+  }
+  if (beforeData.defaultBranch !== afterData.defaultBranch) {
+    changes.push(
+      `branch: ${beforeData.defaultBranch || "Unassigned"} -> ${afterData.defaultBranch || "Unassigned"}`
+    );
+  }
+
+  return {
+    id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    entity_type: "user",
+    entity_id: String(nextUser.id),
+    action: "updated",
+    performed_by: actor.id,
+    performed_by_email: actor.email || "",
+    performed_at: new Date().toISOString(),
+    reason: null,
+    branch: getUserDefaultBranch(nextUser) || getUserDefaultBranch(previousUser) || null,
+    source: "admin-panel",
+    before_data: beforeData,
+    after_data: afterData,
+    request_id: null,
+    metadata: {
+      summary: `Updated ${nextUser.email || nextUser.id}.`,
+      details: changes.join("; ") || "Updated user profile."
+    }
+  };
 }
 
 async function requireAdmin(req) {
@@ -240,6 +302,15 @@ export default async function handler(req, res) {
         detail: updateError?.message || "Unknown error"
       });
       return;
+    }
+
+    const auditRow = buildUserAuditRow(userData.user, updatedData.user, auth.user);
+    if (auditRow) {
+      try {
+        await auth.serviceClient.from(AUDIT_TABLE).insert([auditRow]);
+      } catch (auditError) {
+        console.error("Audit log write failed:", auditError);
+      }
     }
 
     res.status(200).json({

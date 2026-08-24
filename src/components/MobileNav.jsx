@@ -76,6 +76,18 @@ const routeIcons = {
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   ),
+  audit: (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
+      <path
+        d="M7 4h8l4 4v12H7z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M15 4v4h4" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M10 12h5M10 16h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  ),
   more: (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
       <circle cx="5" cy="12" r="1.5" fill="currentColor" />
@@ -118,7 +130,8 @@ export default function MobileNav({ currentUser, onLogout }) {
         { key: "dashboard", label: "Home", to: "/" },
         { key: "staffSales", label: "Staff", to: "/staff-sales" },
         { key: "inventory", label: "Inv", to: "/inventory" },
-        { key: "sales", label: "Sales", to: "/sales" }
+        { key: "sales", label: "Sales", to: "/sales" },
+        { key: "audit", label: "Audit", to: "/audit-logs" }
       ];
     }
 
@@ -168,7 +181,8 @@ export default function MobileNav({ currentUser, onLogout }) {
   }, []);
 
   useEffect(() => {
-    setOpen(false);
+    const timer = setTimeout(() => setOpen(false), 0);
+    return () => clearTimeout(timer);
   }, [currentUser]);
 
   if (!primaryRoutes.length) return null;
@@ -178,7 +192,7 @@ export default function MobileNav({ currentUser, onLogout }) {
       <div className="px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         <div
           ref={menuRef}
-          className="relative overflow-visible rounded-[28px] border border-white/10 bg-[#221813]/96 px-3 py-2 shadow-[0_-12px_40px_-20px_rgba(0,0,0,0.45)] backdrop-blur"
+          className="relative overflow-visible rounded-[28px] border border-[var(--surface-border)] bg-[linear-gradient(180deg,rgba(255,253,251,0.98)_0%,rgba(245,237,229,0.98)_100%)] px-3 py-2 shadow-[0_-12px_40px_-20px_rgba(58,41,29,0.2)] backdrop-blur"
         >
           <div className="flex items-stretch justify-between gap-2">
             {primaryRoutes.map((route) => (
@@ -190,13 +204,13 @@ export default function MobileNav({ currentUser, onLogout }) {
                   [
                     "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold transition",
                     isActive
-                      ? "bg-[#3a261b] text-[#ff9a4a] shadow-[0_10px_24px_-18px_rgba(255,122,26,0.35)]"
-                      : "text-[#d1c3b6] hover:bg-[#2d1e16] hover:text-[#f5e5d7]"
+                      ? "bg-[var(--accent-soft)] text-[#c96f15] shadow-[0_10px_24px_-18px_rgba(255,122,26,0.22)]"
+                      : "text-[#6f5f52] hover:bg-[#fff1e3] hover:text-[#c96f15]"
                   ].join(" ")
                 }
                 aria-label={route.label}
               >
-                <span className="text-[#ff9a4a]">{routeIcons[route.key]}</span>
+                <span className="text-[#ff7a1a]">{routeIcons[route.key]}</span>
                 <span className="truncate leading-none">{route.label}</span>
               </NavLink>
             ))}
@@ -204,12 +218,12 @@ export default function MobileNav({ currentUser, onLogout }) {
             <button
               type="button"
               onClick={() => setOpen((prev) => !prev)}
-              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold text-[#d1c3b6] transition hover:bg-[#2d1e16] hover:text-[#f5e5d7]"
+              className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold text-[#6f5f52] transition hover:bg-[#fff1e3] hover:text-[#c96f15]"
               aria-expanded={open}
               aria-haspopup="menu"
               aria-label="More options"
             >
-              <span className="text-[#ff9a4a]">{routeIcons.more}</span>
+              <span className="text-[#ff7a1a]">{routeIcons.more}</span>
               <span className="truncate leading-none">More</span>
             </button>
           </div>

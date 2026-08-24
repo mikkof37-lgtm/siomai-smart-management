@@ -6,7 +6,9 @@ const LOCAL_API_ROUTES = new Map([
   ["/api/forecast", "./api/forecast.js"],
   ["/api/daily-sales-report", "./api/daily-sales-report.js"],
   ["/api/sale-receipt", "./api/sale-receipt.js"],
-  ["/api/admin-users", "./api/admin-users.js"]
+  ["/api/admin-users", "./api/admin-users.js"],
+  ["/api/audit-log", "./api/audit-log.js"],
+  ["/api/sales-sync", "./api/sales-sync.js"]
 ]);
 
 async function readRequestBody(req) {
