@@ -9,9 +9,13 @@ import { canAccessStaffSales, getUserDefaultBranch } from "../utils/authRoles";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 import { buildUniqueSaleProductOptions } from "../utils/saleProductOptions";
 import {
+  getSalePricingHint,
+  getSaleQuantityUnitLabel,
+  getSaleUnitPrice
+} from "../utils/salePricing";
+import {
   formatInventoryQuantityForDisplay,
   getSaleInventoryQuantity,
-  isSiomaiItem
 } from "../utils/siomaiUnits";
 import {
   formatSaleDate,
@@ -35,12 +39,6 @@ const toDateInputValue = (date = new Date()) => {
 const normalizeText = (value) =>
   typeof value === "string" ? value.trim().toLowerCase() : "";
 
-const SIOMAI_BUNDLE_PRICING = new Map([
-  ["regular pork siomai", { bundlePrice: 16, bundleQty: 3 }],
-  ["chicken siomai", { bundlePrice: 16, bundleQty: 3 }],
-  ["premium pork siomai", { bundlePrice: 18, bundleQty: 3 }]
-]);
-
 const resolveInventoryItem = (inventory, productName) => {
   const normalized = normalizeText(productName);
   if (!normalized) return null;
@@ -50,18 +48,6 @@ const resolveInventoryItem = (inventory, productName) => {
 
   const partialMatches = inventory.filter((item) => normalizeText(item.name).includes(normalized));
   return partialMatches.length === 1 ? partialMatches[0] : null;
-};
-
-const getSaleUnitPrice = (inventoryItem) => {
-  if (!inventoryItem) return 0;
-
-  const normalizedName = normalizeText(inventoryItem.name);
-  const bundlePricing = SIOMAI_BUNDLE_PRICING.get(normalizedName);
-  if (bundlePricing) {
-    return bundlePricing.bundlePrice / bundlePricing.bundleQty;
-  }
-
-  return Number(inventoryItem.price || 0);
 };
 
 const createDraftLine = () => ({
@@ -728,10 +714,26 @@ export default function StaffSales({ onLogout, currentUser }) {
                                 Qty
                               </label>
                               <p className="mt-1 text-[11px] leading-4 text-[#9a8b7d]">
-                                {isSiomaiItem(line.selectedInventoryItem)
-                                  ? "Enter siomai sales in pcs"
+                                {line.selectedInventoryItem
+                                  ? getSaleQuantityUnitLabel(line.selectedInventoryItem) === "pcs"
+                                    ? "Enter siomai sales in pcs"
+                                    : getSaleQuantityUnitLabel(line.selectedInventoryItem) === "pieces"
+                                    ? "Enter paper cup sales in pieces"
+                                    : `Enter the sold quantity in ${getSaleQuantityUnitLabel(line.selectedInventoryItem)}`
                                   : "Enter the sold quantity"}
                               </p>
+                              {line.selectedInventoryItem && (
+                                <p className="mt-1 text-[11px] leading-4 text-[#9a8b7d]">
+                                  {getSalePricingHint(line.selectedInventoryItem) ||
+                                    `Pricing uses ${formatCurrency(line.unitPrice)} per unit.`}
+                                </p>
+                              )}
+                              {line.selectedInventoryItem &&
+                                getSaleQuantityUnitLabel(line.selectedInventoryItem) === "pieces" && (
+                                  <p className="mt-1 text-[11px] leading-4 text-[#9a8b7d]">
+                                    Public sale is PHP 12.00 per piece.
+                                  </p>
+                                )}
                               <input
                                 id={`item-qty-${line.id}`}
                                 type="number"

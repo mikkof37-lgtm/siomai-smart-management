@@ -36,16 +36,6 @@ const SALE_BRANCH_PREFIX = "__smart_inventory_branch__:";
 const hasSupabaseConfig =
   Boolean(import.meta.env.VITE_SUPABASE_URL) && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
-function encodeSaleNotes(branch, notes) {
-  const cleanBranch = typeof branch === "string" ? branch.trim() : "";
-  const cleanNotes = typeof notes === "string" ? notes.trim() : "";
-
-  if (!cleanBranch) return cleanNotes;
-
-  const prefix = `${SALE_BRANCH_PREFIX}${encodeURIComponent(cleanBranch)}`;
-  return cleanNotes ? `${prefix}\n${cleanNotes}` : prefix;
-}
-
 function decodeSaleNotes(notes) {
   const text = typeof notes === "string" ? notes : "";
   if (!text.startsWith(SALE_BRANCH_PREFIX)) {
@@ -600,7 +590,7 @@ export function SalesProvider({ children }) {
 
       scheduleConsistencyRetry();
     },
-    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
+    [adjustInventoryForSales, recordSaleAuditLogs, scheduleConsistencyRetry, setExtraSales]
   );
 
   const addSale = useCallback(
@@ -629,7 +619,13 @@ export function SalesProvider({ children }) {
     adjustInventoryForSales(extraSalesState, 1);
     setExtraSales([]);
     scheduleConsistencyRetry();
-  }, [adjustInventoryForSales, extraSalesState, scheduleConsistencyRetry, setExtraSales]);
+  }, [
+    adjustInventoryForSales,
+    extraSalesState,
+    recordSaleAuditLogs,
+    scheduleConsistencyRetry,
+    setExtraSales
+  ]);
 
   const deleteSaleRecord = useCallback(
     (saleId) => {
@@ -671,7 +667,14 @@ export function SalesProvider({ children }) {
       ]);
       scheduleConsistencyRetry();
     },
-    [adjustInventoryForSales, extraSalesState, recordSaleAuditLogs, scheduleConsistencyRetry, setExtraSales, syncSales]
+    [
+      adjustInventoryForSales,
+      extraSalesState,
+      recordSaleAuditLogs,
+      scheduleConsistencyRetry,
+      setExtraSales,
+      syncSales
+    ]
   );
 
   const undoLastSale = useCallback(
@@ -710,7 +713,7 @@ export function SalesProvider({ children }) {
         scheduleConsistencyRetry();
       }
     },
-    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
+    [adjustInventoryForSales, recordSaleAuditLogs, scheduleConsistencyRetry, setExtraSales]
   );
 
   const voidLastSale = useCallback(
@@ -771,7 +774,7 @@ export function SalesProvider({ children }) {
 
       return removedSale;
     },
-    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
+    [adjustInventoryForSales, recordSaleAuditLogs, scheduleConsistencyRetry, setExtraSales]
   );
 
   const correctSaleRecord = useCallback(
@@ -856,7 +859,7 @@ export function SalesProvider({ children }) {
 
       return correctedSale;
     },
-    [adjustInventoryForSales, scheduleConsistencyRetry, setExtraSales]
+    [adjustInventoryForSales, recordSaleAuditLogs, scheduleConsistencyRetry, setExtraSales]
   );
 
   const value = useMemo(() => {

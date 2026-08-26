@@ -44,6 +44,17 @@ export const inventory = [
     updatedAt: "3 hours ago"
   },
   {
+    id: 9,
+    code: "ITEM-007",
+    name: "Paper Cups",
+    category: "Supplies",
+    stock: 250,
+    unit: "pieces",
+    threshold: 50,
+    price: 100,
+    updatedAt: "4 hours ago"
+  },
+  {
     id: 7,
     code: "ITEM-004",
     name: "Chili Garlic Sauce (Gallon)",

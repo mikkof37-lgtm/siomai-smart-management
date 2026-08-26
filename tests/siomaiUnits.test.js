@@ -22,6 +22,14 @@ describe("siomai unit helpers", () => {
     expect(formatInventoryQuantityForDisplay("Regular Pork Siomai", 0.003)).toBe("0.003 packs");
   });
 
+  test("keep paper cups piece-based in inventory math", () => {
+    expect(getSaleInventoryQuantity("12 OZ PAPER CUPS (50 PCS)", 50)).toBe(50);
+    expect(getSaleInventoryQuantity("12 OZ PAPER CUPS (50 PCS)", 1)).toBe(1);
+    expect(formatInventoryQuantityForDisplay("12 OZ PAPER CUPS (50 PCS)", 1, "pieces")).toBe(
+      "1 pieces"
+    );
+  });
+
   test("normalize stale premium siomai data to the latest inventory rule", () => {
     const migrated = normalizeSiomaiInventoryItem({
       name: "Premium Pork Siomai",
@@ -42,4 +50,3 @@ describe("siomai unit helpers", () => {
     expect(getSiomaiPackDescription("Premium Pork Siomai")).toBe("1 pack = 1000 pcs");
   });
 });
-

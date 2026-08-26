@@ -1,8 +1,9 @@
 const DEFAULT_SIOMAI_PACK_SIZE = 100;
-const SIOMAI_RULES = new Map([
+const PACKED_ITEM_RULES = new Map([
   ["regular pork siomai", { packSize: 1000 }],
   ["chicken siomai", { packSize: 1000 }],
-  ["premium pork siomai", { packSize: 1000 }]
+  ["premium pork siomai", { packSize: 1000 }],
+  ["japanese siomai", { packSize: DEFAULT_SIOMAI_PACK_SIZE }]
 ]);
 
 const normalizeText = (value) =>
@@ -22,12 +23,15 @@ const toFiniteNumber = (value, fallback = 0) => {
 
 const getPackSizeForName = (name) => {
   const normalized = normalizeText(resolveItemName(name));
-  if (!normalized.includes("siomai")) return 1;
-  return SIOMAI_RULES.get(normalized)?.packSize || DEFAULT_SIOMAI_PACK_SIZE;
+  return PACKED_ITEM_RULES.get(normalized)?.packSize || 1;
 };
 
 export function isSiomaiItem(value) {
   return normalizeText(resolveItemName(value)).includes("siomai");
+}
+
+export function isPackBasedItem(value) {
+  return isSiomaiItem(value);
 }
 
 export function getSiomaiPackSize(value) {
@@ -38,8 +42,15 @@ export function getSiomaiPackPrecision(value) {
   const packSize = getSiomaiPackSize(value);
   if (packSize <= 1) return 0;
 
-  const precision = Math.log10(packSize);
-  return Number.isInteger(precision) ? precision : 0;
+  let precision = 0;
+  let scale = 1;
+
+  while (precision < 6 && scale % packSize !== 0) {
+    precision += 1;
+    scale *= 10;
+  }
+
+  return scale % packSize === 0 ? precision : 0;
 }
 
 export function roundSiomaiQuantity(value, itemOrName) {
@@ -56,21 +67,21 @@ export function roundSiomaiQuantity(value, itemOrName) {
 
 export function getSaleInventoryQuantity(itemOrName, saleQty) {
   const qty = toFiniteNumber(saleQty, 0);
-  if (!isSiomaiItem(itemOrName)) return qty;
+  if (!isPackBasedItem(itemOrName)) return qty;
 
   const packSize = getSiomaiPackSize(itemOrName);
   return roundSiomaiQuantity(qty / packSize, itemOrName);
 }
 
 export function getSaleQuantityUnitLabel(itemOrName, fallbackUnit = "units") {
-  return isSiomaiItem(itemOrName) ? "pcs" : fallbackUnit;
+  return isPackBasedItem(itemOrName) ? "pcs" : fallbackUnit;
 }
 
 export function formatInventoryQuantityForDisplay(itemOrName, value, fallbackUnit = "units") {
   const quantity = toFiniteNumber(value, 0);
-  const unit = isSiomaiItem(itemOrName) ? "packs" : fallbackUnit;
+  const unit = isPackBasedItem(itemOrName) ? "packs" : fallbackUnit;
   const precision = getSiomaiPackPrecision(itemOrName);
-  const rounded = isSiomaiItem(itemOrName)
+  const rounded = isPackBasedItem(itemOrName)
     ? roundSiomaiQuantity(quantity, itemOrName)
     : quantity;
 
@@ -93,7 +104,7 @@ export function normalizeSiomaiInventoryItem(item) {
   if (!item || typeof item !== "object") return item;
 
   const name = typeof item.name === "string" ? item.name : "";
-  if (!isSiomaiItem(name)) return item;
+  if (!isPackBasedItem(name)) return item;
 
   const normalized = {
     ...item,
@@ -110,7 +121,8 @@ export function normalizeSiomaiInventoryItem(item) {
         : roundSiomaiQuantity(item.maxStock, name)
   };
 
-  if (normalizeText(name) === "premium pork siomai") {
+  const normalizedName = normalizeText(name);
+  if (normalizedName === "premium pork siomai") {
     normalized.price = 2950;
   }
 

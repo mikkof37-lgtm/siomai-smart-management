@@ -8,9 +8,13 @@ import { isAdminOrOwner } from "../utils/authRoles";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 import { buildUniqueSaleProductOptions } from "../utils/saleProductOptions";
 import {
+  getSalePricingHint,
+  getSaleQuantityUnitLabel,
+  getSaleUnitPrice
+} from "../utils/salePricing";
+import {
   formatInventoryQuantityForDisplay,
   getSaleInventoryQuantity,
-  getSaleQuantityUnitLabel
 } from "../utils/siomaiUnits";
 import { formatSaleDate, normalizeSaleDateValue, saleDateKey } from "../utils/salesDates";
 
@@ -26,30 +30,12 @@ const toDateInputValue = (date = new Date()) => {
 const normalizeText = (value) =>
   typeof value === "string" ? value.trim().toLowerCase() : "";
 
-const SIOMAI_BUNDLE_PRICING = new Map([
-  ["regular pork siomai", { bundlePrice: 16, bundleQty: 3 }],
-  ["chicken siomai", { bundlePrice: 16, bundleQty: 3 }],
-  ["premium pork siomai", { bundlePrice: 18, bundleQty: 3 }]
-]);
-
 const resolveInventoryItem = (inventory, productName) => {
   const normalized = normalizeText(productName);
   if (!normalized) return null;
 
   const directMatch = inventory.find((item) => normalizeText(item.name) === normalized);
   return directMatch || null;
-};
-
-const getSaleUnitPrice = (inventoryItem) => {
-  if (!inventoryItem) return 0;
-
-  const normalizedName = normalizeText(inventoryItem.name);
-  const bundlePricing = SIOMAI_BUNDLE_PRICING.get(normalizedName);
-  if (bundlePricing) {
-    return bundlePricing.bundlePrice / bundlePricing.bundleQty;
-  }
-
-  return Number(inventoryItem.price || 0);
 };
 
 const getDefaultRecordForm = () => ({
@@ -201,12 +187,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
   }, [activePage, filteredSales]);
 
   const pricingHint = selectedInventoryItem
-    ? SIOMAI_BUNDLE_PRICING.has(normalizeText(selectedInventoryItem.name))
-      ? (() => {
-          const bundlePricing = SIOMAI_BUNDLE_PRICING.get(normalizeText(selectedInventoryItem.name));
-          return `Special pricing: PHP ${bundlePricing.bundlePrice.toFixed(2)} per ${bundlePricing.bundleQty} pieces for ${selectedInventoryItem.name}.`;
-        })()
-      : `Matched inventory item: ${selectedInventoryItem.name}`
+    ? getSalePricingHint(selectedInventoryItem) || `Matched inventory item: ${selectedInventoryItem.name}`
     : "Choose an exact product from inventory to auto-calculate the total.";
   const tableGridClass = canManageSalesHistory
     ? "grid-cols-[1fr_1fr_2fr_0.8fr_1fr_1fr_88px]"
@@ -587,8 +568,12 @@ export default function SalesHistory({ onLogout, currentUser }) {
                 <div>
                 <label className="text-sm font-medium text-[#5a4a3f]">Quantity</label>
                 <p className="mt-1 text-xs text-[#9a8b7d]">
-                  {selectedInventoryItem && getSaleQuantityUnitLabel(selectedInventoryItem) === "pcs"
-                    ? "Siomai uses pcs"
+                  {selectedInventoryItem
+                    ? getSaleQuantityUnitLabel(selectedInventoryItem) === "pcs"
+                      ? "Siomai uses pcs"
+                      : getSaleQuantityUnitLabel(selectedInventoryItem) === "pieces"
+                      ? "Paper cups use pieces"
+                      : `This item is sold in ${getSaleQuantityUnitLabel(selectedInventoryItem)}.`
                     : "Enter the quantity sold"}
                 </p>
                   <input

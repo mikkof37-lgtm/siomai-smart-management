@@ -6,6 +6,10 @@ import { useSettings } from "../context/SettingsContext";
 import { isAdminOrOwner } from "../utils/authRoles";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 import {
+  getInventoryRuleHint,
+  isInventoryRuleItem
+} from "../utils/inventoryItemRules";
+import {
   formatInventoryQuantityForDisplay,
   getSiomaiPackDescription,
   getSiomaiPackSize,
@@ -127,6 +131,7 @@ const [editForm, setEditForm] = useState({
 });
 const [editError, setEditError] = useState("");
 const isEditingSiomai = isSiomaiItem(editingItem || editForm.name);
+const isEditingFixedItem = isInventoryRuleItem(editingItem || editForm.name);
 const filteredHistory = useMemo(() => {
   const q = historyQuery.trim().toLowerCase();
 
@@ -224,10 +229,14 @@ const handleAddItem = (e) => {
 
   const name = form.name.trim();
   const category = form.category.trim();
-  const unit = normalizeUnit(form.unit);
+  const unit = isSiomaiItem(name)
+    ? "packs"
+    : isInventoryRuleItem(name)
+    ? "pieces"
+    : normalizeUnit(form.unit);
   const stock = Number(form.stock);
   const threshold = Number(form.threshold);
-  const price = Number(form.price);
+  const price = isInventoryRuleItem(name) ? 100 : Number(form.price);
   const minStock = form.minStock === "" ? "" : Number(form.minStock);
   const maxStock = form.maxStock === "" ? "" : Number(form.maxStock);
 
@@ -298,8 +307,8 @@ const openEdit = (item) => {
   setEditForm({
     name: item.name || "",
     category: item.category || "",
-    unit: isSiomaiItem(item) ? "packs" : normalizeUnit(item.unit),
-    price: item.price ?? "",
+    unit: isSiomaiItem(item) ? "packs" : isInventoryRuleItem(item) ? "pieces" : normalizeUnit(item.unit),
+    price: isInventoryRuleItem(item) ? 100 : item.price ?? "",
     stock: item.stock ?? "",
     threshold: item.threshold ?? "",
     minStock: item.minStock ?? "",
@@ -327,8 +336,12 @@ const handleEditSave = (e) => {
 
   const name = editForm.name.trim();
   const category = editForm.category.trim();
-  const unit = isSiomaiItem(name) ? "packs" : normalizeUnit(editForm.unit);
-  const price = Number(editForm.price);
+  const unit = isSiomaiItem(name)
+    ? "packs"
+    : isInventoryRuleItem(name)
+    ? "pieces"
+    : normalizeUnit(editForm.unit);
+  const price = isInventoryRuleItem(name) ? 100 : Number(editForm.price);
   const stock = Number(editForm.stock);
   const threshold = Number(editForm.threshold);
   const minStock = editForm.minStock === "" ? "" : Number(editForm.minStock);
@@ -497,6 +510,7 @@ return (
             <select
               value={form.unit}
               onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))}
+              disabled={isSiomaiItem(form.name) || isInventoryRuleItem(form.name)}
               className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
             >
               <option value="" disabled>
@@ -532,10 +546,13 @@ return (
               className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
               placeholder="0"
             />
-            {isSiomaiItem(form.name) && (
+            {(isSiomaiItem(form.name) || isInventoryRuleItem(form.name)) && (
               <p className="mt-2 text-xs text-[#9a8b7d]">
-                Siomai stock is stored in packs. {getSiomaiPackDescription(form.name)}.
-                Current stock equals {Number(form.stock || 0) * getSiomaiPackSize(form.name)} pcs.
+                {isSiomaiItem(form.name)
+                  ? "Siomai stock is stored in packs."
+                  : "Paper cup stock is stored in packs."}{" "}
+                {getSiomaiPackDescription(form.name)}. Current stock equals{" "}
+                {Number(form.stock || 0) * getSiomaiPackSize(form.name)} pcs.
               </p>
             )}
           </div>
@@ -973,6 +990,11 @@ return (
             minimum stock, and maximum stock should stay in packs.
           </div>
         )}
+        {isEditingFixedItem && !isEditingSiomai && (
+          <div className="rounded-2xl border border-[#f2dfcf] bg-[#fffaf5] px-4 py-3 text-sm text-[#6f5f52]">
+            {getInventoryRuleHint(editingItem || editForm.name)}
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="text-sm font-medium text-[#5a4a3f]">Item Name</label>
@@ -999,7 +1021,7 @@ return (
             <select
               value={editForm.unit}
               onChange={(e) => setEditForm((prev) => ({ ...prev, unit: e.target.value }))}
-              disabled={isEditingSiomai}
+              disabled={isEditingSiomai || isEditingFixedItem}
               className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
             >
               <option value="" disabled>

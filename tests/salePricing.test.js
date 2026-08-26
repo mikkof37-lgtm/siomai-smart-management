@@ -1,0 +1,29 @@
+import { describe, expect, test } from "vitest";
+import { applyInventoryItemRules, getInventoryRuleHint } from "../src/utils/inventoryItemRules.js";
+import {
+  getSalePricingHint,
+  getSaleQuantityUnitLabel,
+  getSaleUnitPrice
+} from "../src/utils/salePricing.js";
+
+describe("sale pricing rules", () => {
+  test("applies paper cup pricing as PHP 12 per piece", () => {
+    const paperCups = { name: "12 OZ PAPER CUPS (50 PCS)", price: 100, unit: "packs" };
+
+    expect(getSaleUnitPrice(paperCups)).toBe(12);
+    expect(getSaleQuantityUnitLabel(paperCups)).toBe("pieces");
+    expect(getSalePricingHint(paperCups)).toContain("PHP 12.00 per piece");
+  });
+
+  test("normalizes paper cup inventory data to packs and PHP 100", () => {
+    const paperCups = applyInventoryItemRules({
+      name: "12 OZ PAPER CUPS (50 PCS)",
+      price: 12,
+      unit: "pieces"
+    });
+
+    expect(paperCups.unit).toBe("pieces");
+    expect(paperCups.price).toBe(100);
+    expect(getInventoryRuleHint(paperCups)).toContain("displayed in pieces");
+  });
+});

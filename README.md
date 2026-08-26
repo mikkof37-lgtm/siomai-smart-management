@@ -118,6 +118,23 @@ Recommended policy setup:
 - allow authenticated admins to read the table if you want direct user-scoped access
 - let the API route handle writes with the service role key
 
+Use `app_metadata` in the policy, not `user_metadata`.
+`user_metadata` can be edited by end users and Supabase will flag that as a security risk.
+
+Paste this if you want the admin read policy:
+
+```sql
+drop policy if exists "audit_logs_select_admins" on public.audit_logs;
+
+create policy "audit_logs_select_admins"
+on public.audit_logs
+for select
+to authenticated
+using (
+  coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') in ('admin', 'owner', 'superadmin')
+);
+```
+
 Do not store audit logs only in localStorage. The browser cache is just a fallback when the backend is unavailable.
 
 ## Testing
