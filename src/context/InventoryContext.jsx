@@ -11,6 +11,7 @@ import {
 import { supabase } from "../lib/supabaseClient";
 import { inventory as initialInventory } from "../data/InventoryData";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
+import { applyInventoryItemRules } from "../utils/inventoryItemRules";
 import {
   formatInventoryQuantityForDisplay,
   normalizeSiomaiInventoryItem
@@ -21,6 +22,7 @@ const InventoryContext = createContext(null);
 const STORAGE_KEY = "smart_inventory_items";
 const HISTORY_STORAGE_KEY = "smart_inventory_history";
 const LAST_SYNC_KEY = "smart_inventory_items_last_synced";
+const DELETED_IDS_KEY = "smart_inventory_deleted_ids";
 const ITEM_CODE_SCHEMA_KEY = "smart_inventory_item_code_schema_version";
 const ITEM_CODE_SCHEMA_VERSION = 3;
 const INVENTORY_TABLE = import.meta.env.VITE_SUPABASE_INVENTORY_TABLE || "inventory_items";
@@ -86,7 +88,7 @@ function normalizeItem(item) {
         : item.updatedAt ?? item.updatedat ?? ""
   };
 
-  return normalizeSiomaiInventoryItem(normalized);
+  return applyInventoryItemRules(normalizeSiomaiInventoryItem(normalized));
 }
 
 function normalizeInventory(items) {
@@ -94,10 +96,37 @@ function normalizeInventory(items) {
   return items.map(normalizeItem).filter(Boolean);
 }
 
-function mergeInventorySnapshots(remoteItems, localItems) {
+function normalizeInventoryIdList(items) {
+  if (!Array.isArray(items)) return [];
+
+  return [...new Set(items.map((item) => String(item).trim()).filter(Boolean))];
+}
+
+function filterDeletedInventory(items, deletedIds) {
+  const tombstones = new Set(normalizeInventoryIdList(deletedIds));
+  if (tombstones.size === 0) return normalizeInventory(items);
+
+  return normalizeInventory(items).filter((item) => !tombstones.has(String(item.id)));
+}
+
+function readStoredDeletedInventoryIds() {
+  const stored = localStorage.getItem(DELETED_IDS_KEY);
+  if (!stored) return [];
+
+  try {
+    const parsed = JSON.parse(stored);
+    return normalizeInventoryIdList(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return [];
+  }
+}
+
+function mergeInventorySnapshots(remoteItems, localItems, deletedIds = []) {
+  const tombstones = new Set(normalizeInventoryIdList(deletedIds));
   const mergedById = new Map();
 
   [...normalizeInventory(remoteItems), ...normalizeInventory(localItems)].forEach((item) => {
+    if (tombstones.has(String(item.id))) return;
     mergedById.set(String(item.id), item);
   });
 
@@ -110,7 +139,7 @@ function readStoredInventorySnapshot() {
 
   try {
     const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? normalizeInventory(parsed) : [];
+    return filterDeletedInventory(Array.isArray(parsed) ? parsed : [], readStoredDeletedInventoryIds());
   } catch {
     return [];
   }
@@ -317,13 +346,14 @@ function toInventoryRow(item) {
 }
 
 export function InventoryProvider({ children }) {
+  const [deletedInventoryIds, setDeletedInventoryIds] = useState(() => new Set(readStoredDeletedInventoryIds()));
   const [inventoryState, setInventoryState] = useState(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          return normalizeInventory(parsed);
+          return filterDeletedInventory(parsed, readStoredDeletedInventoryIds());
         }
       } catch {
         // Ignore invalid storage and fall back to seed data.
@@ -350,6 +380,7 @@ export function InventoryProvider({ children }) {
   const remoteLoadedRef = useRef(false);
   const lastSyncedInventoryRef = useRef(readStoredInventorySnapshot());
   const inventoryStateRef = useRef(inventoryState);
+  const deletedInventoryIdsRef = useRef(deletedInventoryIds);
   const conflictResolutionRef = useRef(new Map());
   const conflictPayloadRef = useRef(new Map());
   const [isOnline, setIsOnline] = useState(() => {
@@ -360,6 +391,10 @@ export function InventoryProvider({ children }) {
   useEffect(() => {
     inventoryStateRef.current = inventoryState;
   }, [inventoryState]);
+
+  useEffect(() => {
+    deletedInventoryIdsRef.current = deletedInventoryIds;
+  }, [deletedInventoryIds]);
 
   const syncInventory = useCallback(
     async (previousItems, nextItems) => {
@@ -376,6 +411,7 @@ export function InventoryProvider({ children }) {
         const baseItems = normalizeInventory(previousItems);
         const localItems = normalizeInventory(nextItems);
         const remoteItems = normalizeInventory(remoteData);
+        const deletedIds = deletedInventoryIdsRef.current || new Set();
 
         const baseById = new Map(baseItems.map((item) => [String(item.id), item]));
         const localById = new Map(localItems.map((item) => [String(item.id), item]));
@@ -394,6 +430,13 @@ export function InventoryProvider({ children }) {
         const resolvedConflictIds = [];
 
         for (const id of allIds) {
+          if (deletedIds.has(id)) {
+            if (remoteById.has(id)) {
+              removedIds.push(id);
+            }
+            continue;
+          }
+
           const baseItem = baseById.get(id) || null;
           const localItem = localById.get(id) || null;
           const remoteItem = remoteById.get(id) || null;
@@ -516,6 +559,14 @@ export function InventoryProvider({ children }) {
             ? resequenceItemCodes(normalizeInventory(resolvedRemoteItems))
             : [];
 
+        if (removedIds.length > 0) {
+          setDeletedInventoryIds((current) => {
+            const next = new Set(current);
+            removedIds.forEach((id) => next.add(String(id)));
+            return next;
+          });
+        }
+
         lastSyncedInventoryRef.current = finalSnapshot;
         localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(finalSnapshot));
         resolvedConflictIds.forEach((id) => {
@@ -568,6 +619,10 @@ export function InventoryProvider({ children }) {
   }, [inventoryState]);
 
   useEffect(() => {
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify([...deletedInventoryIds].sort()));
+  }, [deletedInventoryIds]);
+
+  useEffect(() => {
     localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(inventoryHistoryState));
   }, [inventoryHistoryState]);
 
@@ -615,7 +670,11 @@ export function InventoryProvider({ children }) {
 
       if (Array.isArray(data)) {
         const normalized = normalizeInventory(data);
-        const mergedSnapshot = mergeInventorySnapshots(normalized, inventoryStateRef.current || []);
+        const mergedSnapshot = mergeInventorySnapshots(
+          normalized,
+          inventoryStateRef.current || [],
+          deletedInventoryIdsRef.current || []
+        );
         const schemaVersion = Number(localStorage.getItem(ITEM_CODE_SCHEMA_KEY) || "0");
         const nextItems =
           schemaVersion >= ITEM_CODE_SCHEMA_VERSION
@@ -633,6 +692,11 @@ export function InventoryProvider({ children }) {
           void syncInventory(normalized, nextItems);
           setIsLoadingInventory(false);
           return;
+        }
+
+        if (normalized.some((item) => deletedInventoryIdsRef.current.has(String(item.id)))) {
+          remoteLoadedRef.current = true;
+          void syncInventory(normalized, nextItems);
         }
       }
 
@@ -681,7 +745,18 @@ export function InventoryProvider({ children }) {
       setInventoryState((current) => {
         const nextItems = typeof value === "function" ? value(current) : value;
         const normalizedNext = normalizeInventory(nextItems);
+        const deletedIds = current
+          .filter((item) => !normalizedNext.some((nextItem) => String(nextItem.id) === String(item.id)))
+          .map((item) => String(item.id));
         const historyEntries = buildInventoryAuditEntries(current, normalizedNext);
+
+        if (deletedIds.length > 0) {
+          setDeletedInventoryIds((currentIds) => {
+            const nextIds = new Set(currentIds);
+            deletedIds.forEach((id) => nextIds.add(id));
+            return nextIds;
+          });
+        }
 
         if (historyEntries.length > 0) {
           setInventoryHistoryState((history) => [
@@ -704,7 +779,7 @@ export function InventoryProvider({ children }) {
         return normalizedNext;
       });
     },
-    [isOnline, syncInventory]
+    [isOnline, recordInventoryAuditLogs, syncInventory]
   );
 
   const resolveInventoryConflict = useCallback(
