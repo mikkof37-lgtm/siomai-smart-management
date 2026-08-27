@@ -40,7 +40,13 @@ export function AppShell() {
   };
 
   const handleLogout = () => {
-    supabase.auth.signOut();
+    setIsAuthed(false);
+    setCurrentUser(null);
+    setAuthError("");
+
+    void supabase.auth.signOut().catch((error) => {
+      console.error("Logout sync failed:", error);
+    });
   };
 
   useEffect(() => {
