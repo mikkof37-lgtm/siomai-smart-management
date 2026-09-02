@@ -40,6 +40,8 @@ const normalizeUnit = (unit) => {
   return UNIT_OPTIONS.some((option) => option.value === value) ? value : "";
 };
 
+const CATEGORY_OPTIONS = ["Finished Goods", "Supplies", "Condiments"];
+
 const ITEM_CODE_PREFIX = "ITEM-";
 
 const getNextItemCode = (items) => {
@@ -132,6 +134,17 @@ const [editForm, setEditForm] = useState({
 const [editError, setEditError] = useState("");
 const isEditingSiomai = isSiomaiItem(editingItem || editForm.name);
 const isEditingFixedItem = isInventoryRuleItem(editingItem || editForm.name);
+const itemNameOptions = useMemo(
+  () => [...new Set(inventory.map((item) => item.name).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+  [inventory]
+);
+const categoryOptions = useMemo(() => {
+  const categories = new Set(CATEGORY_OPTIONS);
+  inventory.forEach((item) => {
+    if (item.category) categories.add(item.category);
+  });
+  return [...categories].sort((a, b) => a.localeCompare(b));
+}, [inventory]);
 const filteredHistory = useMemo(() => {
   const q = historyQuery.trim().toLowerCase();
 
@@ -486,24 +499,40 @@ return (
       <form onSubmit={handleAddItem} className="mt-6 space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="text-sm font-medium text-[#5a4a3f]">Item Name</label>
-            <input
-              type="text"
+            <label htmlFor="add-item-name" className="text-sm font-medium text-[#5a4a3f]">Item Name</label>
+            <select
+              id="add-item-name"
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-              placeholder="e.g. Pork Siomai"
-            />
+            >
+              <option value="" disabled>
+                Select an item
+              </option>
+              {itemNameOptions.map((itemName) => (
+                <option key={itemName} value={itemName}>
+                  {itemName}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-[#5a4a3f]">Category</label>
-            <input
-              type="text"
+            <label htmlFor="add-item-category" className="text-sm font-medium text-[#5a4a3f]">Category</label>
+            <select
+              id="add-item-category"
               value={form.category}
               onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-              placeholder="e.g. Raw Material"
-            />
+            >
+              <option value="" disabled>
+                Select a category
+              </option>
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-sm font-medium text-[#5a4a3f]">Unit</label>
