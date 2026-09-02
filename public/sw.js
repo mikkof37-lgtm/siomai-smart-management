@@ -1,4 +1,4 @@
-const CACHE_NAME = "smart-inventory-shell-v2";
+const CACHE_NAME = "smart-inventory-shell-v3";
 const FALLBACK_HTML_URLS = ["/", "/index.html"];
 const STATIC_FALLBACKS = ["/favicon.svg"];
 

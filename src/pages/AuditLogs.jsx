@@ -346,7 +346,7 @@ export default function AuditLogs({ onLogout, currentUser }) {
             : "";
           setNotice([backendNotice, queueNotice].filter(Boolean).join(" ").trim());
         }
-      } catch (requestError) {
+      } catch {
         const queuedLogs = getQueuedAuditLogs();
         setLogs(queuedLogs);
         setTotal(queuedLogs.length);
@@ -424,7 +424,7 @@ export default function AuditLogs({ onLogout, currentUser }) {
       } while (currentPage <= totalPageCount);
 
       downloadCsv(allRows);
-    } catch (requestError) {
+    } catch {
       const queuedLogs = getQueuedAuditLogs();
       if (queuedLogs.length > 0) {
         downloadCsv(queuedLogs);

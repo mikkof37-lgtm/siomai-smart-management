@@ -85,7 +85,7 @@ describe("StaffSales sale entry flow", () => {
 
     render(<StaffSales currentUser={currentUser} onLogout={vi.fn()} />);
 
-    const branchSelect = screen.getByLabelText("Branch");
+    const branchButton = screen.getByRole("button", { name: "Talavera 2" });
     const firstProductInput = screen.getByLabelText("Product");
     const firstQtyInput = screen.getByLabelText("Qty");
     const notesInput = screen.getByPlaceholderText("Optional notes for this sale");
@@ -93,10 +93,10 @@ describe("StaffSales sale entry flow", () => {
     const submitButton = screen.getByRole("button", { name: "Record Sale" });
 
     await waitFor(() => {
-      expect(branchSelect).toHaveValue("Talavera 2");
+      expect(branchButton).toHaveClass("border-[#ff7a1a]");
     });
 
-    await user.selectOptions(branchSelect, "Talavera 2");
+    await user.click(branchButton);
     await user.selectOptions(firstProductInput, "Chili Garlic Sauce (Gallon)");
     fireEvent.change(firstQtyInput, { target: { value: "2" } });
     expect(firstQtyInput).toHaveValue(2);
@@ -137,7 +137,7 @@ describe("StaffSales sale entry flow", () => {
     });
     expect(batch[1].price).toBeCloseTo(16 / 3, 5);
     await waitFor(() => {
-      expect(screen.getByLabelText("Branch")).toHaveValue("Talavera 2");
+      expect(screen.getByRole("button", { name: "Talavera 2" })).toHaveClass("border-[#ff7a1a]");
       expect(screen.getAllByLabelText("Product")[0]).toHaveValue("");
       expect(screen.getAllByRole("spinbutton")).toHaveLength(1);
       expect(screen.getAllByRole("spinbutton")[0]).toHaveValue(1);
@@ -152,7 +152,7 @@ describe("StaffSales sale entry flow", () => {
     render(<StaffSales currentUser={currentUser} onLogout={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByLabelText("Branch")).toHaveValue("Talavera 2");
+      expect(screen.getByRole("button", { name: "Talavera 2" })).toHaveClass("border-[#ff7a1a]");
     });
 
     await user.click(

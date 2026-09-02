@@ -569,9 +569,7 @@ export default function StaffSales({ onLogout, currentUser }) {
 
                 <form onSubmit={handleFinalizeSale} className="space-y-6 px-6 py-6">
                   <div>
-                    <label htmlFor="branch-select" className="text-sm font-medium text-[#5a4a3f]">
-                      Branch
-                    </label>
+                    <p className="text-sm font-medium text-[#5a4a3f]">Branch</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {BRANCH_OPTIONS.map((branch) => (
                         <button
@@ -594,24 +592,6 @@ export default function StaffSales({ onLogout, currentUser }) {
                         </button>
                       ))}
                     </div>
-                      <select
-                      id="branch-select"
-                      value={receiptDraft.branch}
-                      onChange={(e) =>
-                        {
-                          setReceiptDraft((prev) => ({ ...prev, branch: e.target.value }));
-                          setCorrectionDraft(null);
-                        }
-                      }
-                      className="mt-3 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2.5 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-                    >
-                      <option value="">Choose a branch</option>
-                      {BRANCH_OPTIONS.map((branch) => (
-                        <option key={branch.value} value={branch.value}>
-                          {branch.label}
-                        </option>
-                      ))}
-                    </select>
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
