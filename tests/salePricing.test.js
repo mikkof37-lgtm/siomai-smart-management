@@ -30,9 +30,12 @@ describe("sale pricing rules", () => {
 
   test("keeps included siomai accessories at zero sale price", () => {
     const paperTray = { name: "PAPER TRAY ( P10 ) ( 100 PCS )", price: 100 };
+    const paperTrayVariant = { name: "Paper Tray (P20) (100PCS)", price: 100 };
 
     expect(getSaleUnitPrice(paperTray)).toBe(0);
     expect(isIncludedSaleItem(paperTray)).toBe(true);
     expect(getSalePricingHint(paperTray)).toBe("Included with the siomai sale price.");
+    expect(getSaleUnitPrice(paperTrayVariant)).toBe(0);
+    expect(isIncludedSaleItem(paperTrayVariant)).toBe(true);
   });
 });

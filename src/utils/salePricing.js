@@ -26,6 +26,14 @@ function getRule(value) {
     return SALE_PRICING_RULES.get("paper cups") || null;
   }
 
+  if (normalized.includes("paper tray") && normalized.includes("p10")) {
+    return SALE_PRICING_RULES.get("paper tray ( p10 ) ( 100 pcs )") || null;
+  }
+
+  if (normalized.includes("paper tray") && normalized.includes("p20")) {
+    return SALE_PRICING_RULES.get("paper tray ( p20 ) ( 100 pcs )") || null;
+  }
+
   return null;
 }
 
