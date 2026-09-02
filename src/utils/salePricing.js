@@ -6,7 +6,12 @@ const SALE_PRICING_RULES = new Map([
   ["chicken siomai", { type: "bundle", bundlePrice: 16, bundleQty: 3, saleUnitLabel: "pcs" }],
   ["premium pork siomai", { type: "bundle", bundlePrice: 18, bundleQty: 3, saleUnitLabel: "pcs" }],
   ["paper cups", { type: "unit", unitPrice: 12, saleUnitLabel: "pieces" }],
-  ["paper cup", { type: "unit", unitPrice: 12, saleUnitLabel: "pieces" }]
+  ["paper cup", { type: "unit", unitPrice: 12, saleUnitLabel: "pieces" }],
+  ["chili oil (gallon)", { type: "included", saleUnitLabel: "gallon" }],
+  ["paper tray ( p10 ) ( 100 pcs )", { type: "included", saleUnitLabel: "pieces" }],
+  ["paper tray ( p20 ) ( 100 pcs )", { type: "included", saleUnitLabel: "pieces" }],
+  ["roasted garlic 1kg", { type: "included", saleUnitLabel: "kg" }],
+  ["soy sauce (gallon)", { type: "included", saleUnitLabel: "gallon" }]
 ]);
 
 function getRule(value) {
@@ -36,7 +41,15 @@ export function getSaleUnitPrice(inventoryItem) {
     return rule.bundlePrice / rule.bundleQty;
   }
 
+  if (rule.type === "included") {
+    return 0;
+  }
+
   return rule.unitPrice;
+}
+
+export function isIncludedSaleItem(inventoryItem) {
+  return getRule(inventoryItem)?.type === "included";
 }
 
 export function getSaleQuantityUnitLabel(inventoryItem, fallbackUnit = "units") {
@@ -54,6 +67,10 @@ export function getSalePricingHint(inventoryItem) {
 
   if (rule.type === "bundle") {
     return `Special pricing: PHP ${rule.bundlePrice.toFixed(2)} per ${rule.bundleQty} pieces for ${name}.`;
+  }
+
+  if (rule.type === "included") {
+    return "Included with the siomai sale price.";
   }
 
   return `Special pricing: PHP ${rule.unitPrice.toFixed(2)} per piece for ${name}.`;

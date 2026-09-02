@@ -3,7 +3,8 @@ import { applyInventoryItemRules, getInventoryRuleHint } from "../src/utils/inve
 import {
   getSalePricingHint,
   getSaleQuantityUnitLabel,
-  getSaleUnitPrice
+  getSaleUnitPrice,
+  isIncludedSaleItem
 } from "../src/utils/salePricing.js";
 
 describe("sale pricing rules", () => {
@@ -25,5 +26,13 @@ describe("sale pricing rules", () => {
     expect(paperCups.unit).toBe("pieces");
     expect(paperCups.price).toBe(100);
     expect(getInventoryRuleHint(paperCups)).toContain("displayed in pieces");
+  });
+
+  test("keeps included siomai accessories at zero sale price", () => {
+    const paperTray = { name: "PAPER TRAY ( P10 ) ( 100 PCS )", price: 100 };
+
+    expect(getSaleUnitPrice(paperTray)).toBe(0);
+    expect(isIncludedSaleItem(paperTray)).toBe(true);
+    expect(getSalePricingHint(paperTray)).toBe("Included with the siomai sale price.");
   });
 });

@@ -11,7 +11,8 @@ import { buildUniqueSaleProductOptions } from "../utils/saleProductOptions";
 import {
   getSalePricingHint,
   getSaleQuantityUnitLabel,
-  getSaleUnitPrice
+  getSaleUnitPrice,
+  isIncludedSaleItem
 } from "../utils/salePricing";
 import {
   formatInventoryQuantityForDisplay,
@@ -977,7 +978,9 @@ export default function StaffSales({ onLogout, currentUser }) {
                               {formatCurrency(Number(sale.qty || 0) * Number(sale.price || 0))}
                             </p>
                             <p className="text-xs text-[#9a8b7d]">
-                              {sale.qty} pcs at {formatCurrency(sale.price)}
+                              {isIncludedSaleItem(sale.product)
+                                ? "Included with siomai sale"
+                                : `${sale.qty} pcs at ${formatCurrency(sale.price)}`}
                             </p>
                           </div>
                         </div>
