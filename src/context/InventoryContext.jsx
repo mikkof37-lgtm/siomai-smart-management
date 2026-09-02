@@ -44,7 +44,9 @@ const UNIT_ALIASES = {
 
 const ITEM_NAME_ALIASES = {
   "pork siomai (premium)": "Regular Pork Siomai",
-  "special japanase siomai": "Special Japanese Siomai"
+  "special japanase siomai": "Special Japanese Siomai",
+  "chili garlic sauce (gallon)": "Chili Oil (Gallon)",
+  "chili oil (gallon)": "Chili Oil (Gallon)"
 };
 
 function normalizeUnit(unit) {
@@ -96,6 +98,20 @@ function normalizeInventory(items) {
   return items.map(normalizeItem).filter(Boolean);
 }
 
+function inventoryIdentity(item) {
+  return typeof item?.name === "string" ? item.name.trim().toLowerCase() : String(item?.id || "");
+}
+
+function deduplicateInventory(items) {
+  const seen = new Set();
+  return normalizeInventory(items).filter((item) => {
+    const identity = inventoryIdentity(item);
+    if (seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+}
+
 function normalizeInventoryIdList(items) {
   if (!Array.isArray(items)) return [];
 
@@ -104,9 +120,9 @@ function normalizeInventoryIdList(items) {
 
 function filterDeletedInventory(items, deletedIds) {
   const tombstones = new Set(normalizeInventoryIdList(deletedIds));
-  if (tombstones.size === 0) return normalizeInventory(items);
+  if (tombstones.size === 0) return deduplicateInventory(items);
 
-  return normalizeInventory(items).filter((item) => !tombstones.has(String(item.id)));
+  return deduplicateInventory(items).filter((item) => !tombstones.has(String(item.id)));
 }
 
 function readStoredDeletedInventoryIds() {
@@ -130,7 +146,7 @@ function mergeInventorySnapshots(remoteItems, localItems, deletedIds = []) {
     mergedById.set(String(item.id), item);
   });
 
-  return [...mergedById.values()];
+  return deduplicateInventory([...mergedById.values()]);
 }
 
 function readStoredInventorySnapshot() {
@@ -409,7 +425,7 @@ export function InventoryProvider({ children }) {
         if (loadError) throw loadError;
 
         const baseItems = normalizeInventory(previousItems);
-        const localItems = normalizeInventory(nextItems);
+        const localItems = deduplicateInventory(nextItems);
         const remoteItems = normalizeInventory(remoteData);
         const deletedIds = deletedInventoryIdsRef.current || new Set();
 
@@ -424,7 +440,13 @@ export function InventoryProvider({ children }) {
 
         const resolvedLocalItems = [];
         const resolvedRemoteItems = [];
-        const upsertRows = [];
+        const upsertRows = remoteData
+          .map((rawItem) => {
+            const normalizedItem = normalizeItem(rawItem);
+            const rawName = typeof rawItem?.name === "string" ? rawItem.name.trim() : "";
+            return normalizedItem && rawName !== normalizedItem.name ? toInventoryRow(normalizedItem) : null;
+          })
+          .filter(Boolean);
         const removedIds = [];
         const conflictIds = [];
         const resolvedConflictIds = [];
@@ -556,7 +578,7 @@ export function InventoryProvider({ children }) {
 
         const finalSnapshot =
           resolvedRemoteItems.length > 0
-            ? resequenceItemCodes(normalizeInventory(resolvedRemoteItems))
+            ? resequenceItemCodes(deduplicateInventory(resolvedRemoteItems))
             : [];
 
         if (removedIds.length > 0) {
@@ -580,7 +602,7 @@ export function InventoryProvider({ children }) {
 
         const nextState =
           resolvedLocalItems.length > 0
-            ? resequenceItemCodes(normalizeInventory(resolvedLocalItems))
+            ? resequenceItemCodes(deduplicateInventory(resolvedLocalItems))
             : [];
         if (!sameInventoryItemArray(nextState, inventoryStateRef.current)) {
           setInventoryState(nextState);
@@ -670,10 +692,23 @@ export function InventoryProvider({ children }) {
 
       if (Array.isArray(data)) {
         const normalized = normalizeInventory(data);
+        const seenNames = new Set();
+        const duplicateIds = normalized
+          .filter((item) => {
+            const identity = inventoryIdentity(item);
+            if (seenNames.has(identity)) return true;
+            seenNames.add(identity);
+            return false;
+          })
+          .map((item) => String(item.id));
+        const loadDeletedIds = new Set([
+          ...(deletedInventoryIdsRef.current || []),
+          ...duplicateIds
+        ]);
         const mergedSnapshot = mergeInventorySnapshots(
           normalized,
           inventoryStateRef.current || [],
-          deletedInventoryIdsRef.current || []
+          loadDeletedIds
         );
         const schemaVersion = Number(localStorage.getItem(ITEM_CODE_SCHEMA_KEY) || "0");
         const nextItems =
@@ -682,11 +717,23 @@ export function InventoryProvider({ children }) {
             : resequenceItemCodes(mergedSnapshot);
 
         setInventoryState(nextItems);
+        if (duplicateIds.length > 0) {
+          deletedInventoryIdsRef.current = loadDeletedIds;
+          setDeletedInventoryIds(loadDeletedIds);
+        }
         setInventorySyncError("");
         lastSyncedInventoryRef.current = normalized;
         localStorage.setItem(LAST_SYNC_KEY, JSON.stringify(normalized));
 
-        if (schemaVersion < ITEM_CODE_SCHEMA_VERSION) {
+        const needsRemoteCleanup =
+          duplicateIds.length > 0 ||
+          data.some((rawItem) => {
+            const normalizedItem = normalizeItem(rawItem);
+            const rawName = typeof rawItem?.name === "string" ? rawItem.name.trim() : "";
+            return normalizedItem && rawName !== normalizedItem.name;
+          });
+
+        if (schemaVersion < ITEM_CODE_SCHEMA_VERSION || needsRemoteCleanup) {
           localStorage.setItem(ITEM_CODE_SCHEMA_KEY, String(ITEM_CODE_SCHEMA_VERSION));
           remoteLoadedRef.current = true;
           void syncInventory(normalized, nextItems);

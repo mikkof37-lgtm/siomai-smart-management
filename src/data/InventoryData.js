@@ -57,7 +57,7 @@ export const inventory = [
   {
     id: 7,
     code: "ITEM-004",
-    name: "Chili Garlic Sauce (Gallon)",
+    name: "Chili Oil (Gallon)",
     category: "Condiments",
     stock: 12,
     unit: "gallon",
