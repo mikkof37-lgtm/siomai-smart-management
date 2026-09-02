@@ -705,7 +705,9 @@ export default function StaffSales({ onLogout, currentUser }) {
                               </label>
                               <p className="mt-1 text-[11px] leading-4 text-[#9a8b7d]">
                                 {line.selectedInventoryItem
-                                  ? getSaleQuantityUnitLabel(line.selectedInventoryItem) === "pcs"
+                                  ? isIncludedSaleItem(line.selectedInventoryItem)
+                                    ? `Enter the sold quantity in ${getSaleQuantityUnitLabel(line.selectedInventoryItem)}`
+                                    : getSaleQuantityUnitLabel(line.selectedInventoryItem) === "pcs"
                                     ? "Enter siomai sales in pcs"
                                     : getSaleQuantityUnitLabel(line.selectedInventoryItem) === "pieces"
                                     ? "Enter paper cup sales in pieces"
@@ -719,6 +721,7 @@ export default function StaffSales({ onLogout, currentUser }) {
                                 </p>
                               )}
                               {line.selectedInventoryItem &&
+                                !isIncludedSaleItem(line.selectedInventoryItem) &&
                                 getSaleQuantityUnitLabel(line.selectedInventoryItem) === "pieces" && (
                                   <p className="mt-1 text-[11px] leading-4 text-[#9a8b7d]">
                                     Public sale is PHP 12.00 per piece.
