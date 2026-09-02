@@ -134,10 +134,6 @@ const [editForm, setEditForm] = useState({
 const [editError, setEditError] = useState("");
 const isEditingSiomai = isSiomaiItem(editingItem || editForm.name);
 const isEditingFixedItem = isInventoryRuleItem(editingItem || editForm.name);
-const itemNameOptions = useMemo(
-  () => [...new Set(inventory.map((item) => item.name).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
-  [inventory]
-);
 const categoryOptions = useMemo(() => {
   const categories = new Set(CATEGORY_OPTIONS);
   inventory.forEach((item) => {
@@ -500,21 +496,14 @@ return (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label htmlFor="add-item-name" className="text-sm font-medium text-[#5a4a3f]">Item Name</label>
-            <select
+            <input
               id="add-item-name"
+              type="text"
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
               className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-            >
-              <option value="" disabled>
-                Select an item
-              </option>
-              {itemNameOptions.map((itemName) => (
-                <option key={itemName} value={itemName}>
-                  {itemName}
-                </option>
-              ))}
-            </select>
+              placeholder="e.g. Pork Siomai"
+            />
           </div>
           <div>
             <label htmlFor="add-item-category" className="text-sm font-medium text-[#5a4a3f]">Category</label>
