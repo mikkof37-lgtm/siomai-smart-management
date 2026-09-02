@@ -98,6 +98,9 @@ export default function StaffSales({ onLogout, currentUser }) {
   const [recordSuccess, setRecordSuccess] = useState("");
   const [correctionDraft, setCorrectionDraft] = useState(null);
   const [focusProductLineId, setFocusProductLineId] = useState("");
+  const [recentSalesBranch, setRecentSalesBranch] = useState(() =>
+    getUserDefaultBranch(currentUser) || ""
+  );
   const productInputRefs = useRef(new Map());
   const correctionPanelRef = useRef(null);
 
@@ -209,14 +212,14 @@ export default function StaffSales({ onLogout, currentUser }) {
   }, [branchSales]);
 
   const recentSales = useMemo(() => {
-    const branch = receiptDraft.branch.trim();
+    const branch = recentSalesBranch.trim();
     return salesHistory
       .filter((sale) => {
         if (!branch) return true;
         return (sale.branch || "").trim() === branch;
       })
       .slice(0, 5);
-  }, [receiptDraft.branch, salesHistory]);
+  }, [recentSalesBranch, salesHistory]);
 
   const selectedSaleForCorrection = useMemo(() => {
     if (!correctionDraft) return null;
@@ -925,16 +928,37 @@ export default function StaffSales({ onLogout, currentUser }) {
               </div>
 
               <div className="rounded-[28px] border border-[#efe6dc] bg-white p-6 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-[#2b2018]">Recent sales</h2>
                     <p className="mt-1 text-sm text-[#8c7b6d]">
                       Latest entries for the selected branch.
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#fff1e3] px-3 py-1 text-[11px] font-semibold text-[#c96f15]">
-                    {recentSales.length}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="recent-sales-branch" className="sr-only">
+                      Filter recent sales by branch
+                    </label>
+                    <select
+                      id="recent-sales-branch"
+                      value={recentSalesBranch}
+                      onChange={(event) => {
+                        setRecentSalesBranch(event.target.value);
+                        setCorrectionDraft(null);
+                      }}
+                      className="rounded-full border border-[#ead9ca] bg-[#fffaf5] px-3 py-2 text-xs font-medium text-[#6f5b4d] outline-none transition focus:border-[#ff9d5c] focus:ring-2 focus:ring-[#ffd4b3]"
+                    >
+                      <option value="">All branches</option>
+                      {BRANCH_OPTIONS.map((branch) => (
+                        <option key={branch.value} value={branch.value}>
+                          {branch.label}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="rounded-full bg-[#fff1e3] px-3 py-1 text-[11px] font-semibold text-[#c96f15]">
+                      {recentSales.length}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="mt-5 space-y-3">
