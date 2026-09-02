@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { applyInventoryItemRules, getInventoryRuleHint } from "../src/utils/inventoryItemRules.js";
+import {
+  applyInventoryItemRules,
+  getInventoryRuleHint,
+  getInventoryRulePriceLabel
+} from "../src/utils/inventoryItemRules.js";
 import {
   getSalePricingHint,
   getSaleQuantityUnitLabel,
@@ -26,6 +30,7 @@ describe("sale pricing rules", () => {
     expect(paperCups.unit).toBe("pieces");
     expect(paperCups.price).toBe(100);
     expect(getInventoryRuleHint(paperCups)).toContain("displayed in pieces");
+    expect(getInventoryRulePriceLabel(paperCups)).toBe("PHP 100.00 per pack of 50 pcs");
   });
 
   test("keeps included siomai accessories at zero sale price", () => {
@@ -37,5 +42,9 @@ describe("sale pricing rules", () => {
     expect(getSalePricingHint(paperTray)).toBe("Included with the siomai sale price.");
     expect(getSaleUnitPrice(paperTrayVariant)).toBe(0);
     expect(isIncludedSaleItem(paperTrayVariant)).toBe(true);
+
+    const spaghettiStyro = { name: "Spaghetti Styro (100 PCS)", price: 100 };
+    expect(getSaleUnitPrice(spaghettiStyro)).toBe(0);
+    expect(isIncludedSaleItem(spaghettiStyro)).toBe(true);
   });
 });

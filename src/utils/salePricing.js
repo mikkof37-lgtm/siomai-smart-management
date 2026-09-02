@@ -34,6 +34,10 @@ function getRule(value) {
     return SALE_PRICING_RULES.get("paper tray ( p20 ) ( 100 pcs )") || null;
   }
 
+  if (normalized.includes("spaghetti") && normalized.includes("styro")) {
+    return { type: "included", saleUnitLabel: "pieces" };
+  }
+
   return null;
 }
 
