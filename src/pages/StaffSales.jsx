@@ -40,6 +40,12 @@ const toDateInputValue = (date = new Date()) => {
 const normalizeText = (value) =>
   typeof value === "string" ? value.trim().toLowerCase() : "";
 
+const STAFF_SALES_EXCLUDED_PRODUCTS = new Set([
+  "chili oil (gallon)",
+  "garlic",
+  "soy sauce (gallon)"
+]);
+
 const resolveInventoryItem = (inventory, productName) => {
   const normalized = normalizeText(productName);
   if (!normalized) return null;
@@ -132,7 +138,9 @@ export default function StaffSales({ onLogout, currentUser }) {
   }, [inventory]);
 
   const inventoryNameOptions = useMemo(() => {
-    return buildUniqueSaleProductOptions(inventoryProductOptions).map((item) => item.name);
+    return buildUniqueSaleProductOptions(inventoryProductOptions)
+      .map((item) => item.name)
+      .filter((name) => !STAFF_SALES_EXCLUDED_PRODUCTS.has(normalizeText(name)));
   }, [inventoryProductOptions]);
 
   const lineItems = useMemo(() => {
