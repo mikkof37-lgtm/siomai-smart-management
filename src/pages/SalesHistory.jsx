@@ -517,11 +517,6 @@ export default function SalesHistory({ onLogout, currentUser }) {
               </button>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[rgba(97,72,56,0.12)] bg-[#fffaf5] px-4 py-3 text-sm text-[var(--surface-muted)]">
-              Enter the branch, product, and quantity. The app will calculate the amount and unit
-              price for you.
-            </div>
-
             <form onSubmit={handleRecordSale} className="mt-6 space-y-4">
               <div>
                 <label className="text-sm font-medium text-[#5a4a3f]">Branch</label>
@@ -567,13 +562,11 @@ export default function SalesHistory({ onLogout, currentUser }) {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                 <label className="text-sm font-medium text-[#5a4a3f]">Quantity</label>
-                {getSaleQuantityUnitLabel(selectedInventoryItem) !== "pieces" && (
+                {selectedInventoryItem && getSaleQuantityUnitLabel(selectedInventoryItem) !== "pieces" && (
                   <p className="mt-1 text-xs text-[#9a8b7d]">
-                    {selectedInventoryItem
-                      ? getSaleQuantityUnitLabel(selectedInventoryItem) === "pcs"
-                        ? "Siomai uses pcs"
-                        : `This item is sold in ${getSaleQuantityUnitLabel(selectedInventoryItem)}.`
-                      : "Enter the quantity sold"}
+                    {getSaleQuantityUnitLabel(selectedInventoryItem) === "pcs"
+                      ? "Siomai uses pcs"
+                      : `This item is sold in ${getSaleQuantityUnitLabel(selectedInventoryItem)}.`}
                   </p>
                 )}
                   <input
