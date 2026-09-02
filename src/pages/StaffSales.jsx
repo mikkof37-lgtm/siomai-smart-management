@@ -43,7 +43,8 @@ const normalizeText = (value) =>
 const STAFF_SALES_EXCLUDED_PRODUCTS = new Set([
   "chili oil (gallon)",
   "garlic",
-  "soy sauce (gallon)"
+  "soy sauce (gallon)",
+  "roasted garlic 1kg"
 ]);
 
 const resolveInventoryItem = (inventory, productName) => {
