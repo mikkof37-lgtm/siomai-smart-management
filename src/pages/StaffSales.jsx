@@ -9,7 +9,6 @@ import { canAccessStaffSales, getUserDefaultBranch } from "../utils/authRoles";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 import { buildUniqueSaleProductOptions } from "../utils/saleProductOptions";
 import {
-  getSalePricingHint,
   getSaleQuantityUnitLabel,
   getSaleUnitPrice,
   isIncludedSaleItem
@@ -714,19 +713,6 @@ export default function StaffSales({ onLogout, currentUser }) {
                                     : `Enter the sold quantity in ${getSaleQuantityUnitLabel(line.selectedInventoryItem)}`
                                   : "Enter the sold quantity"}
                               </p>
-                              {line.selectedInventoryItem && (
-                                <p className="mt-1 text-[11px] leading-4 text-[#9a8b7d]">
-                                  {getSalePricingHint(line.selectedInventoryItem) ||
-                                    `Pricing uses ${formatCurrency(line.unitPrice)} per unit.`}
-                                </p>
-                              )}
-                              {line.selectedInventoryItem &&
-                                !isIncludedSaleItem(line.selectedInventoryItem) &&
-                                getSaleQuantityUnitLabel(line.selectedInventoryItem) === "pieces" && (
-                                  <p className="mt-1 text-[11px] leading-4 text-[#9a8b7d]">
-                                    Public sale is PHP 12.00 per piece.
-                                  </p>
-                                )}
                               <input
                                 id={`item-qty-${line.id}`}
                                 type="number"
