@@ -567,15 +567,15 @@ export default function SalesHistory({ onLogout, currentUser }) {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
                 <label className="text-sm font-medium text-[#5a4a3f]">Quantity</label>
-                <p className="mt-1 text-xs text-[#9a8b7d]">
-                  {selectedInventoryItem
-                    ? getSaleQuantityUnitLabel(selectedInventoryItem) === "pcs"
-                      ? "Siomai uses pcs"
-                      : getSaleQuantityUnitLabel(selectedInventoryItem) === "pieces"
-                      ? "Paper cups use pieces"
-                      : `This item is sold in ${getSaleQuantityUnitLabel(selectedInventoryItem)}.`
-                    : "Enter the quantity sold"}
-                </p>
+                {getSaleQuantityUnitLabel(selectedInventoryItem) !== "pieces" && (
+                  <p className="mt-1 text-xs text-[#9a8b7d]">
+                    {selectedInventoryItem
+                      ? getSaleQuantityUnitLabel(selectedInventoryItem) === "pcs"
+                        ? "Siomai uses pcs"
+                        : `This item is sold in ${getSaleQuantityUnitLabel(selectedInventoryItem)}.`
+                      : "Enter the quantity sold"}
+                  </p>
+                )}
                   <input
                     type="number"
                     min="1"
