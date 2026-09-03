@@ -6,11 +6,12 @@ import TopBar from "../components/TopBar";
 import { useInventory } from "../context/InventoryContext";
 import { useSettings } from "../context/SettingsContext";
 import { useSales } from "../context/SalesContext";
+import { summarizeSalesProfit } from "../utils/profitCalculations";
 
 export default function Dashboard({ onLogout, currentUser }) {
   const { inventory } = useInventory();
   const { settings } = useSettings();
-  const { totalRevenue } = useSales();
+  const { salesHistory, totalRevenue } = useSales();
 
   const totalItems = inventory.length;
   const lowStockCount = inventory.filter(
@@ -19,6 +20,7 @@ export default function Dashboard({ onLogout, currentUser }) {
   const revenueChange =
     totalRevenue === 0 ? "No sales recorded yet" : "Pulled live from sales history";
   const restockSuggestions = lowStockCount;
+  const profitSummary = summarizeSalesProfit(salesHistory, inventory);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--app-bg)] md:flex-row">
@@ -136,6 +138,38 @@ export default function Dashboard({ onLogout, currentUser }) {
                   <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
                 </svg>
               }
+            />
+
+            <StatsCard
+              title="Cost of goods sold"
+              value={`PHP ${profitSummary.cogs.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}`}
+              desc="Owner supply cost"
+              trend="neutral"
+              descClassName="text-[var(--surface-muted)]"
+              iconBg="bg-[#f3eee8]"
+              iconColor="text-[#8c7b6d]"
+              icon={<span className="text-sm font-bold">COGS</span>}
+            />
+
+            <StatsCard
+              title="Gross profit"
+              value={`PHP ${profitSummary.grossProfit.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+              })}`}
+              desc={
+                totalRevenue > 0
+                  ? `${((profitSummary.grossProfit / totalRevenue) * 100).toFixed(1)}% margin`
+                  : "No sales recorded yet"
+              }
+              trend="up"
+              descClassName="text-[#1f8f5f]"
+              iconBg="bg-[#e8f7ee]"
+              iconColor="text-[#1e9e61]"
+              icon={<span className="text-base font-bold">+</span>}
             />
           </div>
 

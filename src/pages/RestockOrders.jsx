@@ -45,9 +45,9 @@ export default function RestockOrders({ onLogout, currentUser }) {
         <div className="px-4 pb-28 pt-4 sm:px-6 sm:pb-28 sm:pt-6 lg:px-8">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="mb-2 text-2xl font-semibold text-[#2b2018]">Restock Orders</h1>
-              <p className="text-sm text-[#8c7b6d]">
-                Use this page when you need to decide what to buy right now.
+          <h1 className="mb-2 text-2xl font-semibold text-[#2b2018]">Owner Supply Requests</h1>
+          <p className="text-sm text-[#8c7b6d]">
+                Use this page to identify supplies that need to be requested from the Sio Republic owner.
                 Suggestions are based on current stock, thresholds, and max stock limits.
               </p>
             </div>
@@ -63,7 +63,7 @@ export default function RestockOrders({ onLogout, currentUser }) {
               <p className="mt-1 text-2xl font-semibold text-[#c06b1d] sm:mt-2 sm:text-3xl">{lowCount}</p>
             </div>
             <div className="col-span-2 rounded-2xl border border-[#efe6dc] bg-white p-3 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)] sm:p-5 md:col-span-1">
-              <p className="text-xs text-[#8c7b6d] sm:text-sm">Suggested total</p>
+              <p className="text-xs text-[#8c7b6d] sm:text-sm">Suggested quantity</p>
               <p className="mt-1 text-2xl font-semibold text-[#2b2018] sm:mt-2 sm:text-3xl">{totalSuggested}</p>
             </div>
           </div>
