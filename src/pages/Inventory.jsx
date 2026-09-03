@@ -1040,13 +1040,20 @@ return (
           </div>
           <div>
             <label className="text-sm font-medium text-[#5a4a3f]">Category</label>
-            <input
-              type="text"
+            <select
               value={editForm.category}
               onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
               className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
-              placeholder="e.g. Raw Material"
-            />
+            >
+              <option value="" disabled>
+                Select a category
+              </option>
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-sm font-medium text-[#5a4a3f]">Unit</label>
