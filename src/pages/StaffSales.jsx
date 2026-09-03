@@ -16,6 +16,8 @@ import {
 import {
   formatInventoryQuantityForDisplay,
   getSaleInventoryQuantity,
+  getSaleStockDisplayQuantity,
+  isPaperCupItem,
 } from "../utils/siomaiUnits";
 import {
   formatSaleDate,
@@ -743,8 +745,13 @@ export default function StaffSales({ onLogout, currentUser }) {
                                 {line.selectedInventoryItem
                                   ? `${formatInventoryQuantityForDisplay(
                                       line.selectedInventoryItem,
-                                      line.remainingStock,
-                                      line.selectedInventoryItem.unit || "units"
+                                      getSaleStockDisplayQuantity(
+                                        line.selectedInventoryItem,
+                                        line.remainingStock
+                                      ),
+                                      isPaperCupItem(line.selectedInventoryItem)
+                                        ? "pieces"
+                                        : line.selectedInventoryItem.unit || "units"
                                     )} remaining`
                                   : "Select an item"}
                               </p>

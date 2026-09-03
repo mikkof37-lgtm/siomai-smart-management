@@ -1,4 +1,5 @@
 const DEFAULT_SIOMAI_PACK_SIZE = 100;
+const PAPER_CUP_PACK_SIZE = 50;
 const PACKED_ITEM_RULES = new Map([
   ["regular pork siomai", { packSize: 1000 }],
   ["chicken siomai", { packSize: 1000 }],
@@ -28,6 +29,11 @@ const getPackSizeForName = (name) => {
 
 export function isSiomaiItem(value) {
   return normalizeText(resolveItemName(value)).includes("siomai");
+}
+
+export function isPaperCupItem(value) {
+  const normalized = normalizeText(resolveItemName(value));
+  return normalized.includes("paper") && normalized.includes("cup");
 }
 
 export function isPackBasedItem(value) {
@@ -67,10 +73,16 @@ export function roundSiomaiQuantity(value, itemOrName) {
 
 export function getSaleInventoryQuantity(itemOrName, saleQty) {
   const qty = toFiniteNumber(saleQty, 0);
+  if (isPaperCupItem(itemOrName)) return qty / PAPER_CUP_PACK_SIZE;
   if (!isPackBasedItem(itemOrName)) return qty;
 
   const packSize = getSiomaiPackSize(itemOrName);
   return roundSiomaiQuantity(qty / packSize, itemOrName);
+}
+
+export function getSaleStockDisplayQuantity(itemOrName, inventoryStock) {
+  const stock = toFiniteNumber(inventoryStock, 0);
+  return isPaperCupItem(itemOrName) ? stock * PAPER_CUP_PACK_SIZE : stock;
 }
 
 export function getSaleQuantityUnitLabel(itemOrName, fallbackUnit = "units") {

@@ -2,8 +2,10 @@ import { describe, expect, test } from "vitest";
 import {
   formatInventoryQuantityForDisplay,
   getSaleInventoryQuantity,
+  getSaleStockDisplayQuantity,
   getSiomaiPackDescription,
   getSiomaiPackSize,
+  isPaperCupItem,
   normalizeSiomaiInventoryItem,
   roundSiomaiQuantity
 } from "../src/utils/siomaiUnits";
@@ -22,11 +24,13 @@ describe("siomai unit helpers", () => {
     expect(formatInventoryQuantityForDisplay("Regular Pork Siomai", 0.003)).toBe("0.003 packs");
   });
 
-  test("keep paper cups piece-based in inventory math", () => {
-    expect(getSaleInventoryQuantity("12 OZ PAPER CUPS (50 PCS)", 50)).toBe(50);
-    expect(getSaleInventoryQuantity("12 OZ PAPER CUPS (50 PCS)", 1)).toBe(1);
-    expect(formatInventoryQuantityForDisplay("12 OZ PAPER CUPS (50 PCS)", 1, "pieces")).toBe(
-      "1 pieces"
+  test("convert paper cup sales into 50-piece pack deductions", () => {
+    expect(getSaleInventoryQuantity("12 OZ PAPER CUPS (50 PCS)", 50)).toBe(1);
+    expect(getSaleInventoryQuantity("12 OZ PAPER CUPS (50 PCS)", 1)).toBe(0.02);
+    expect(getSaleStockDisplayQuantity("12 OZ PAPER CUPS (50 PCS)", 13)).toBe(650);
+    expect(isPaperCupItem("12 OZ PAPER CUPS (50 PCS)")).toBe(true);
+    expect(formatInventoryQuantityForDisplay("12 OZ PAPER CUPS (50 PCS)", 649, "pieces")).toBe(
+      "649 pieces"
     );
   });
 
