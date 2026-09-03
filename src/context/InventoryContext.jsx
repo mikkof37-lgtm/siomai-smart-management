@@ -25,6 +25,7 @@ const LAST_SYNC_KEY = "smart_inventory_items_last_synced";
 const DELETED_IDS_KEY = "smart_inventory_deleted_ids";
 const ITEM_CODE_SCHEMA_KEY = "smart_inventory_item_code_schema_version";
 const ITEM_CODE_SCHEMA_VERSION = 3;
+const REMOVED_INVENTORY_NAMES = new Set(["japanese siomai"]);
 const INVENTORY_TABLE = import.meta.env.VITE_SUPABASE_INVENTORY_TABLE || "inventory_items";
 const HISTORY_LIMIT = 100;
 const hasSupabaseConfig =
@@ -69,6 +70,8 @@ function normalizeItem(item) {
     typeof item.name === "string"
       ? ITEM_NAME_ALIASES[item.name.trim().toLowerCase()] || item.name.trim()
       : item.name ?? "";
+
+  if (REMOVED_INVENTORY_NAMES.has(String(name).trim().toLowerCase())) return null;
 
   const normalized = {
     ...item,
@@ -444,7 +447,15 @@ export function InventoryProvider({ children }) {
           .map((rawItem) => {
             const normalizedItem = normalizeItem(rawItem);
             const rawName = typeof rawItem?.name === "string" ? rawItem.name.trim() : "";
-            return normalizedItem && rawName !== normalizedItem.name ? toInventoryRow(normalizedItem) : null;
+            const rawUnit = normalizeUnit(rawItem?.unit);
+            const rawPrice = Number(rawItem?.price ?? 0);
+            const needsNormalization =
+              normalizedItem &&
+              (rawName !== normalizedItem.name ||
+                rawUnit !== normalizedItem.unit ||
+                rawPrice !== Number(normalizedItem.price));
+
+            return needsNormalization ? toInventoryRow(normalizedItem) : null;
           })
           .filter(Boolean);
         const removedIds = [];
@@ -730,7 +741,14 @@ export function InventoryProvider({ children }) {
           data.some((rawItem) => {
             const normalizedItem = normalizeItem(rawItem);
             const rawName = typeof rawItem?.name === "string" ? rawItem.name.trim() : "";
-            return normalizedItem && rawName !== normalizedItem.name;
+            const rawUnit = normalizeUnit(rawItem?.unit);
+            const rawPrice = Number(rawItem?.price ?? 0);
+            return (
+              normalizedItem &&
+              (rawName !== normalizedItem.name ||
+                rawUnit !== normalizedItem.unit ||
+                rawPrice !== Number(normalizedItem.price))
+            );
           });
 
         if (schemaVersion < ITEM_CODE_SCHEMA_VERSION || needsRemoteCleanup) {

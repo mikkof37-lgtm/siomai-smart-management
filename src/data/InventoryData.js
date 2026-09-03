@@ -33,17 +33,6 @@ export const inventory = [
     updatedAt: "1 hour ago"
   },
   {
-    id: 4,
-    code: "ITEM-003",
-    name: "Japanese Siomai",
-    category: "Finished Goods",
-    stock: 150,
-    unit: "packs",
-    threshold: 120,
-    price: 135,
-    updatedAt: "3 hours ago"
-  },
-  {
     id: 9,
     code: "ITEM-007",
     name: "Paper Cups",

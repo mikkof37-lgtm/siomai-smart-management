@@ -52,6 +52,7 @@ describe("sale pricing rules", () => {
 
   test("uses the configured owner costs for supplies", () => {
     expect(getInventoryRulePrice("SPAGHETTI STYRO (100 PCS )")).toBe(140);
+    expect(getInventoryRulePrice("Chili Oil (Gallon)")).toBe(750);
     expect(getInventoryRulePrice("Soy Sauce (Gallon)")).toBe(190);
     expect(getInventoryRulePrice("ROASTED GARLIC 1KG")).toBe(160);
     expect(getInventoryRulePrice("PAPER TRAY ( P20 ) ( 100 PCS )")).toBe(130);

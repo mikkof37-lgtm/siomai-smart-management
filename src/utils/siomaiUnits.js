@@ -147,6 +147,10 @@ export function normalizeSiomaiInventoryItem(item) {
   };
 
   const normalizedName = normalizeText(name);
+  if (normalizedName === "chicken siomai") {
+    normalized.price = 2400;
+  }
+
   if (normalizedName === "premium pork siomai") {
     normalized.price = 2950;
   }

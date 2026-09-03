@@ -13,6 +13,7 @@ const INVENTORY_RULES = new Map([
   ["spaghetti styro (100 pcs)", { unit: "pieces", price: 140, packSize: 100 }],
   ["paper tray ( p20 ) ( 100 pcs )", { unit: "pieces", price: 130, packSize: 100 }],
   ["paper tray ( p10 ) ( 100 pcs )", { unit: "pieces", price: 110, packSize: 100 }],
+  ["chili oil (gallon)", { unit: "gallon", price: 750, packSize: 1 }],
   ["soy sauce (gallon)", { unit: "gallon", price: 190, packSize: 1 }],
   ["roasted garlic 1kg", { unit: "kg", price: 160, packSize: 1 }]
 ]);

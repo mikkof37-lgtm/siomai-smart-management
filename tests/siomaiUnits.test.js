@@ -53,4 +53,15 @@ describe("siomai unit helpers", () => {
     expect(migrated.price).toBe(2950);
     expect(getSiomaiPackDescription("Premium Pork Siomai")).toBe("1 pack = 1000 pcs");
   });
+
+  test("normalizes chicken siomai to the PHP 2400 owner pack cost", () => {
+    const normalized = normalizeSiomaiInventoryItem({
+      name: "Chicken Siomai",
+      unit: "packs",
+      stock: 3,
+      price: 110
+    });
+
+    expect(normalized.price).toBe(2400);
+  });
 });
