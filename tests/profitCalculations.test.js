@@ -33,4 +33,22 @@ describe("profit calculations", () => {
     expect(result.cogs).toBe(20);
     expect(result.grossProfit).toBe(100);
   });
+
+  test("uses 100-piece pack costs for included trays and spaghetti styro", () => {
+    const inventoryItems = [
+      { id: 2, name: "PAPER TRAY ( P10 ) ( 100 PCS )", price: 110, unit: "pieces" },
+      { id: 3, name: "PAPER TRAY ( P20 ) ( 100 PCS )", price: 130, unit: "pieces" },
+      { id: 4, name: "SPAGHETTI STYRO (100 PCS )", price: 140, unit: "pieces" }
+    ];
+
+    expect(
+      getSaleProfitBreakdown({ inventoryItemId: 2, qty: 31, price: 0 }, inventoryItems).cogs
+    ).toBeCloseTo(34.1);
+    expect(
+      getSaleProfitBreakdown({ inventoryItemId: 3, qty: 57, price: 0 }, inventoryItems).cogs
+    ).toBeCloseTo(74.1);
+    expect(
+      getSaleProfitBreakdown({ inventoryItemId: 4, qty: 100, price: 0 }, inventoryItems).cogs
+    ).toBe(140);
+  });
 });

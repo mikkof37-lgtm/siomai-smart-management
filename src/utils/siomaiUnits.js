@@ -7,6 +7,13 @@ const PACKED_ITEM_RULES = new Map([
   ["japanese siomai", { packSize: DEFAULT_SIOMAI_PACK_SIZE }]
 ]);
 
+const SUPPLY_PACK_SIZES = [
+  { matches: (name) => name.includes("paper cup"), packSize: 50 },
+  { matches: (name) => name.includes("paper tray") && name.includes("p10"), packSize: 100 },
+  { matches: (name) => name.includes("paper tray") && name.includes("p20"), packSize: 100 },
+  { matches: (name) => name.includes("spaghetti") && name.includes("styro"), packSize: 100 }
+];
+
 const normalizeText = (value) =>
   typeof value === "string" ? value.trim().toLowerCase() : "";
 
@@ -25,6 +32,11 @@ const toFiniteNumber = (value, fallback = 0) => {
 const getPackSizeForName = (name) => {
   const normalized = normalizeText(resolveItemName(name));
   return PACKED_ITEM_RULES.get(normalized)?.packSize || 1;
+};
+
+const getSupplyPackSize = (value) => {
+  const normalized = normalizeText(resolveItemName(value));
+  return SUPPLY_PACK_SIZES.find((rule) => rule.matches(normalized))?.packSize || 1;
 };
 
 export function isSiomaiItem(value) {
@@ -73,7 +85,8 @@ export function roundSiomaiQuantity(value, itemOrName) {
 
 export function getSaleInventoryQuantity(itemOrName, saleQty) {
   const qty = toFiniteNumber(saleQty, 0);
-  if (isPaperCupItem(itemOrName)) return qty / PAPER_CUP_PACK_SIZE;
+  const supplyPackSize = getSupplyPackSize(itemOrName);
+  if (supplyPackSize > 1) return qty / supplyPackSize;
   if (!isPackBasedItem(itemOrName)) return qty;
 
   const packSize = getSiomaiPackSize(itemOrName);

@@ -7,6 +7,10 @@ import { isAdminOrOwner } from "../utils/authRoles";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 import {
   getInventoryRulePriceLabel,
+  getInventoryRulePrice,
+  getInventoryRulePackSize,
+  getInventoryRuleUnit,
+  formatInventoryRuleStock,
   getInventoryRuleHint,
   isInventoryRuleItem
 } from "../utils/inventoryItemRules";
@@ -241,11 +245,11 @@ const handleAddItem = (e) => {
   const unit = isSiomaiItem(name)
     ? "packs"
     : isInventoryRuleItem(name)
-    ? "pieces"
+    ? getInventoryRuleUnit(name)
     : normalizeUnit(form.unit);
   const stock = Number(form.stock);
   const threshold = Number(form.threshold);
-  const price = isInventoryRuleItem(name) ? 100 : Number(form.price);
+  const price = isInventoryRuleItem(name) ? getInventoryRulePrice(name) : Number(form.price);
   const minStock = form.minStock === "" ? "" : Number(form.minStock);
   const maxStock = form.maxStock === "" ? "" : Number(form.maxStock);
 
@@ -316,8 +320,12 @@ const openEdit = (item) => {
   setEditForm({
     name: item.name || "",
     category: item.category || "",
-    unit: isSiomaiItem(item) ? "packs" : isInventoryRuleItem(item) ? "packs" : normalizeUnit(item.unit),
-    price: isInventoryRuleItem(item) ? 100 : item.price ?? "",
+    unit: isSiomaiItem(item)
+      ? "packs"
+      : isInventoryRuleItem(item)
+      ? getInventoryRuleUnit(item)
+      : normalizeUnit(item.unit),
+    price: isInventoryRuleItem(item) ? getInventoryRulePrice(item) : item.price ?? "",
     stock: item.stock ?? "",
     threshold: item.threshold ?? "",
     minStock: item.minStock ?? "",
@@ -348,9 +356,9 @@ const handleEditSave = (e) => {
   const unit = isSiomaiItem(name)
     ? "packs"
     : isInventoryRuleItem(name)
-    ? "pieces"
+    ? getInventoryRuleUnit(name)
     : normalizeUnit(editForm.unit);
-  const price = isInventoryRuleItem(name) ? 100 : Number(editForm.price);
+  const price = isInventoryRuleItem(name) ? getInventoryRulePrice(name) : Number(editForm.price);
   const stock = Number(editForm.stock);
   const threshold = Number(editForm.threshold);
   const minStock = editForm.minStock === "" ? "" : Number(editForm.minStock);
@@ -526,7 +534,7 @@ return (
           <div>
             <label className="text-sm font-medium text-[#5a4a3f]">Unit</label>
             <select
-              value={isInventoryRuleItem(form.name) ? "packs" : form.unit}
+              value={isInventoryRuleItem(form.name) ? getInventoryRuleUnit(form.name) : form.unit}
               onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))}
               disabled={isSiomaiItem(form.name) || isInventoryRuleItem(form.name)}
               className="mt-1 w-full rounded-xl border border-[#efe5db] bg-white px-4 py-2 text-sm text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
@@ -543,7 +551,9 @@ return (
           </div>
           <div>
             <label className="text-sm font-medium text-[#5a4a3f]">
-              {isInventoryRuleItem(form.name) ? "Unit Cost (PHP / 50-piece pack)" : "Unit Cost (PHP)"}
+              {isInventoryRuleItem(form.name)
+                ? `Unit Cost (PHP / ${getInventoryRulePackSize(form.name)}-piece pack)`
+                : "Unit Cost (PHP)"}
             </label>
             <input
               type="number"
@@ -570,7 +580,7 @@ return (
               <p className="mt-2 text-xs text-[#9a8b7d]">
                 {isSiomaiItem(form.name)
                   ? `Siomai stock is stored in packs. ${getSiomaiPackDescription(form.name)}.`
-                  : `${getInventoryRuleHint(form.name)} Current stock is stored in pieces.`}
+                  : getInventoryRuleHint(form.name)}
               </p>
             )}
           </div>
@@ -734,11 +744,9 @@ return (
             </div>
             <div className="text-sm text-[#8c7b6d]">{item.category}</div>
             <div className="text-sm font-semibold text-[#2b2018]">
-              {formatInventoryQuantityForDisplay(
-                item,
-                item.stock,
-                isInventoryRuleItem(item) ? "packs" : item.unit
-              )}
+              {isInventoryRuleItem(item)
+                ? formatInventoryRuleStock(item.stock, item)
+                : formatInventoryQuantityForDisplay(item, item.stock, item.unit)}
             </div>
               <div className="text-sm text-[#8c7b6d]">
                 {isInventoryRuleItem(item)
@@ -833,11 +841,9 @@ return (
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-[#9a8b7d]">Stock</p>
                 <p className="mt-1 font-semibold text-[#2b2018]">
-                  {formatInventoryQuantityForDisplay(
-                    item,
-                    item.stock,
-                    isInventoryRuleItem(item) ? "packs" : item.unit
-                  )}
+                  {isInventoryRuleItem(item)
+                    ? formatInventoryRuleStock(item.stock, item)
+                    : formatInventoryQuantityForDisplay(item, item.stock, item.unit)}
                 </p>
               </div>
               <div>
@@ -1075,7 +1081,9 @@ return (
           </div>
           <div>
             <label className="text-sm font-medium text-[#5a4a3f]">
-              {isEditingFixedItem ? "Unit Cost (PHP / 50-piece pack)" : "Unit Cost (PHP)"}
+              {isEditingFixedItem
+                ? `Unit Cost (PHP / ${getInventoryRulePackSize(editingItem || editForm.name)}-piece pack)`
+                : "Unit Cost (PHP)"}
             </label>
             <input
               type="number"

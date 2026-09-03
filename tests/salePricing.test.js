@@ -2,7 +2,9 @@ import { describe, expect, test } from "vitest";
 import {
   applyInventoryItemRules,
   getInventoryRuleHint,
-  getInventoryRulePriceLabel
+  getInventoryRulePrice,
+  getInventoryRulePriceLabel,
+  formatInventoryRuleStock
 } from "../src/utils/inventoryItemRules.js";
 import {
   getSalePricingHint,
@@ -46,5 +48,15 @@ describe("sale pricing rules", () => {
     const spaghettiStyro = { name: "Spaghetti Styro (100 PCS)", price: 100 };
     expect(getSaleUnitPrice(spaghettiStyro)).toBe(0);
     expect(isIncludedSaleItem(spaghettiStyro)).toBe(true);
+  });
+
+  test("uses the configured owner costs for supplies", () => {
+    expect(getInventoryRulePrice("SPAGHETTI STYRO (100 PCS )")).toBe(140);
+    expect(getInventoryRulePrice("Soy Sauce (Gallon)")).toBe(190);
+    expect(getInventoryRulePrice("ROASTED GARLIC 1KG")).toBe(160);
+    expect(getInventoryRulePrice("PAPER TRAY ( P20 ) ( 100 PCS )")).toBe(130);
+    expect(getInventoryRulePrice("PAPER TRAY ( P10 ) ( 100 PCS )")).toBe(110);
+    expect(formatInventoryRuleStock(2000, "PAPER TRAY ( P10 ) ( 100 PCS )")).toBe("20 packs");
+    expect(formatInventoryRuleStock(8, "Soy Sauce (Gallon)")).toBe("8 gallon");
   });
 });
