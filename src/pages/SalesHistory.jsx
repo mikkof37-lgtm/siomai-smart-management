@@ -10,7 +10,8 @@ import { buildUniqueSaleProductOptions } from "../utils/saleProductOptions";
 import {
   getSalePricingHint,
   getSaleQuantityUnitLabel,
-  getSaleUnitPrice
+  getSaleUnitPrice,
+  isIncludedSaleItem
 } from "../utils/salePricing";
 import {
   formatInventoryQuantityForDisplay,
@@ -380,31 +381,45 @@ export default function SalesHistory({ onLogout, currentUser }) {
                 ) : (
                   paginatedSales.map((sale) => {
                     const total = sale.qty * sale.price;
+                    const isIncludedItem = isIncludedSaleItem(sale.product);
                     return (
-                      <div key={sale.id} className="rounded-2xl border border-[rgba(97,72,56,0.12)] bg-[#fffdfb] p-4 shadow-[0_12px_32px_-26px_rgba(58,41,29,0.4)]">
+                      <div
+                        key={sale.id}
+                        className={`rounded-2xl border p-3 shadow-[0_12px_32px_-26px_rgba(58,41,29,0.4)] sm:p-4 ${
+                          isIncludedItem
+                            ? "border-[#eee5dc] bg-[#fcfaf7]"
+                            : "border-[rgba(97,72,56,0.12)] bg-[#fffdfb]"
+                        }`}
+                      >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--surface-muted)]">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--surface-muted)] sm:text-xs sm:tracking-[0.16em]">
                               {formatSaleDate(sale.date)}
                             </p>
-                            <h3 className="mt-1 text-[15px] font-semibold leading-5 text-[var(--app-text)]">
+                            <h3 className="mt-1 truncate text-sm font-semibold leading-5 text-[var(--app-text)] sm:text-[15px]">
                               {sale.product}
                             </h3>
-                            <p className="mt-1 text-sm text-[var(--surface-muted)]">{sale.branch || "Unassigned"}</p>
+                            <p className="mt-1 text-xs text-[var(--surface-muted)] sm:text-sm">{sale.branch || "Unassigned"}</p>
                           </div>
-                          <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[#b85d11]">
-                            {sale.qty} pcs
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                            isIncludedItem
+                              ? "bg-[#f0ebe5] text-[#88776a]"
+                              : "bg-[var(--accent-soft)] text-[#b85d11]"
+                          }`}>
+                            {isIncludedItem ? "Included" : `${sale.qty} pcs`}
                           </span>
                         </div>
 
-                        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-sm sm:mt-4 sm:gap-3">
                           <div>
-                            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--surface-muted)]">Unit price</p>
-                            <p className="mt-1 font-semibold text-[var(--app-text)]">{formatCurrency(sale.price)}</p>
+                            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.16em]">Unit price</p>
+                            <p className="mt-1 text-sm font-semibold text-[var(--app-text)]">{isIncludedItem ? "Included" : formatCurrency(sale.price)}</p>
                           </div>
                           <div>
-                            <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--surface-muted)]">Total</p>
-                            <p className="mt-1 font-semibold text-[#b85d11]">{formatCurrency(total)}</p>
+                            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.16em]">Total</p>
+                            <p className={`mt-1 text-sm font-semibold ${isIncludedItem ? "text-[#88776a]" : "text-[#b85d11]"}`}>
+                              {isIncludedItem ? "Included" : formatCurrency(total)}
+                            </p>
                           </div>
                         </div>
 
@@ -418,7 +433,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
                               if (!confirmed) return;
                               deleteSaleRecord(sale.id);
                             }}
-                            className="mt-4 w-full rounded-xl border border-[rgba(97,72,56,0.16)] bg-white px-4 py-2 text-sm font-semibold text-[#b85d11] transition hover:border-[#f46f1a] hover:text-[#9f4c09]"
+                            className="mt-3 rounded-full border border-[rgba(97,72,56,0.16)] bg-white px-3 py-1.5 text-xs font-semibold text-[#b85d11] transition hover:border-[#f46f1a] hover:text-[#9f4c09] sm:mt-4"
                             aria-label={`Delete ${sale.product} record`}
                           >
                             Delete
@@ -493,7 +508,7 @@ export default function SalesHistory({ onLogout, currentUser }) {
       </div>
 
       {showRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 py-10">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/40 px-4 py-6 pb-32 sm:items-center sm:px-6 sm:py-10 sm:pb-10">
           <div className="w-full max-w-2xl rounded-[28px] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,250,245,0.96)_100%)] p-6 shadow-[0_28px_80px_-40px_rgba(24,15,10,0.42)]">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-[var(--app-text)]">Add sale to ledger</h2>
