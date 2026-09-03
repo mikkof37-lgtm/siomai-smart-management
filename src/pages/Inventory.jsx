@@ -734,7 +734,11 @@ return (
             </div>
             <div className="text-sm text-[#8c7b6d]">{item.category}</div>
             <div className="text-sm font-semibold text-[#2b2018]">
-              {formatInventoryQuantityForDisplay(item, item.stock, item.unit)}
+              {formatInventoryQuantityForDisplay(
+                item,
+                item.stock,
+                isInventoryRuleItem(item) ? "packs" : item.unit
+              )}
             </div>
               <div className="text-sm text-[#8c7b6d]">
                 {isInventoryRuleItem(item)
@@ -829,7 +833,11 @@ return (
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-[#9a8b7d]">Stock</p>
                 <p className="mt-1 font-semibold text-[#2b2018]">
-                  {formatInventoryQuantityForDisplay(item, item.stock, item.unit)}
+                  {formatInventoryQuantityForDisplay(
+                    item,
+                    item.stock,
+                    isInventoryRuleItem(item) ? "packs" : item.unit
+                  )}
                 </p>
               </div>
               <div>
