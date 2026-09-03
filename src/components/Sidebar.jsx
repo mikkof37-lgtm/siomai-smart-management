@@ -3,8 +3,6 @@ import { NavLink } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { canAccessStaffSales, isAdminOrOwner } from "../utils/authRoles";
 
-const SIDEBAR_COLLAPSED_KEY = "smart_inventory_sidebar_collapsed";
-
 const navItems = [
   {
     label: "Dashboard",
@@ -158,10 +156,7 @@ const navItems = [
 
 export default function Sidebar({ currentUser }) {
   const [sessionUser, setSessionUser] = useState(null);
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
-    return stored ? stored === "1" : true;
-  });
+  const isCollapsed = false;
   const user = currentUser ?? sessionUser;
 
   useEffect(() => {
@@ -187,10 +182,6 @@ export default function Sidebar({ currentUser }) {
   const navLabelClassName = isCollapsed ? "max-w-0 opacity-0" : "max-w-[10rem] opacity-100";
   const navIdleClassName =
     "text-[#d1c3b6] hover:bg-[color:rgba(255,255,255,0.05)] hover:text-[#fff7f0] hover:shadow-[0_10px_30px_-20px_rgba(0,0,0,0.45)]";
-
-  useEffect(() => {
-    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, isCollapsed ? "1" : "0");
-  }, [isCollapsed]);
 
   const renderNavItem = (item, isDesktopCollapsed = false) => (
     <NavLink
@@ -291,34 +282,8 @@ export default function Sidebar({ currentUser }) {
 
       <div className="hidden md:flex md:flex-1 md:flex-col">
         <div className={`relative border-b border-white/5 px-4 pt-5 ${isCollapsed ? "pb-6" : "pb-5"}`}>
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            className="absolute right-3 top-3 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#3a261b] bg-[#261a14] text-[#d1c3b6] transition hover:border-[#f46f1a] hover:text-[#ffb07a]"
-            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            aria-pressed={isCollapsed}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className={`h-4 w-4 transition-transform duration-200 ${
-                isCollapsed ? "rotate-180" : ""
-              }`}
-              fill="none"
-            >
-              <path
-                d="M9 6l6 6-6 6"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-
           <div
-            className={`flex items-center gap-3 overflow-hidden transition-all duration-200 ${
-              isCollapsed ? "justify-center pt-8" : "w-auto opacity-100 pr-12"
-            }`}
+            className="flex items-center gap-3 overflow-hidden"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--accent)] text-white shadow-lg shadow-orange-900/25">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
@@ -336,11 +301,7 @@ export default function Sidebar({ currentUser }) {
                 />
               </svg>
             </div>
-            <div
-              className={`overflow-hidden transition-all duration-200 ${
-                isCollapsed ? "w-0 opacity-0" : "w-auto opacity-100"
-              }`}
-            >
+            <div className="overflow-hidden">
               <p className="text-sm font-semibold tracking-[0.01em]">Sio Republic</p>
               <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--sidebar-muted)]">
                 Smart Inventory
