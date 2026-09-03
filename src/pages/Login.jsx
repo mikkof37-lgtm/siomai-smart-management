@@ -65,7 +65,10 @@ export default function Login() {
     try {
       const { error: signUpError } = await supabase.auth.signUp({
         email: emailValue,
-        password: pass
+        password: pass,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login?confirmed=1`
+        }
       });
       if (signUpError) {
         setError(signUpError.message);
