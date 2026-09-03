@@ -40,7 +40,7 @@ export function getInventoryRulePriceLabel(value) {
   const rule = getRule(value);
   if (!rule) return "";
 
-  return `PHP ${Number(rule.price || 0).toFixed(2)} per pack of ${rule.packSize} pcs`;
+  return `PHP ${Number(rule.price || 0).toFixed(2)}`;
 }
 
 export function applyInventoryItemRules(item) {

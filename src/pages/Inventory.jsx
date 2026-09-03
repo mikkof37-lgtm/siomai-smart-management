@@ -452,7 +452,7 @@ return (
         </div>
         <div className="min-w-0 rounded-xl bg-white px-2 py-1.5 shadow-sm sm:px-3 sm:py-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9a8b7d] sm:text-[11px] sm:tracking-[0.18em]">
-            Critical
+            Very Low
           </p>
           <p className="mt-1 text-base font-semibold text-[#ff4d4f] sm:text-lg">{criticalStockCount}</p>
         </div>
