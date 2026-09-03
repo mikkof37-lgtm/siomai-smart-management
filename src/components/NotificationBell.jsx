@@ -162,7 +162,7 @@ export default function NotificationBell({ compact = false }) {
                             : "bg-[#fff3d8] text-[#c27a1a]"
                         }`}
                       >
-                        {isCritical ? "CRITICAL" : "LOW"}
+                        {isCritical ? "VERY LOW" : "LOW"}
                       </span>
                     </div>
                   </button>

@@ -11,7 +11,7 @@ const getRestockData = (item, settings) => {
     ? Math.max(0, Number(item.maxStock) - Number(item.stock || 0))
     : Math.max(0, Number(item.threshold || 0) - Number(item.stock || 0));
 
-  const priority = isCritical ? "Critical" : isLow ? "Low" : "Healthy";
+  const priority = isCritical ? "Very Low" : isLow ? "Low" : "Healthy";
 
   return {
     ...item,
@@ -53,18 +53,18 @@ export default function RestockOrders({ onLogout, currentUser }) {
             </div>
           </div>
 
-          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm text-[#8c7b6d]">Critical items</p>
-              <p className="mt-2 text-3xl font-semibold text-[#ff4d4f]">{criticalCount}</p>
+          <div className="mb-6 grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-4">
+            <div className="rounded-2xl border border-[#efe6dc] bg-white p-3 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)] sm:p-5">
+              <p className="text-xs text-[#8c7b6d] sm:text-sm">Critical items</p>
+              <p className="mt-1 text-2xl font-semibold text-[#ff4d4f] sm:mt-2 sm:text-3xl">{criticalCount}</p>
             </div>
-            <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm text-[#8c7b6d]">Items to reorder</p>
-              <p className="mt-2 text-3xl font-semibold text-[#c06b1d]">{lowCount}</p>
+            <div className="rounded-2xl border border-[#efe6dc] bg-white p-3 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)] sm:p-5">
+              <p className="text-xs text-[#8c7b6d] sm:text-sm">Items to reorder</p>
+              <p className="mt-1 text-2xl font-semibold text-[#c06b1d] sm:mt-2 sm:text-3xl">{lowCount}</p>
             </div>
-            <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm text-[#8c7b6d]">Suggested total</p>
-              <p className="mt-2 text-3xl font-semibold text-[#2b2018]">{totalSuggested}</p>
+            <div className="col-span-2 rounded-2xl border border-[#efe6dc] bg-white p-3 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)] sm:p-5 md:col-span-1">
+              <p className="text-xs text-[#8c7b6d] sm:text-sm">Suggested total</p>
+              <p className="mt-1 text-2xl font-semibold text-[#2b2018] sm:mt-2 sm:text-3xl">{totalSuggested}</p>
             </div>
           </div>
 

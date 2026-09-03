@@ -6,13 +6,13 @@ import { useSettings } from "../context/SettingsContext";
 import { isAdminOrOwner } from "../utils/authRoles";
 import { compareInventoryDisplayOrder } from "../utils/inventoryOrdering";
 import {
+  getInventoryRulePriceLabel,
   getInventoryRuleHint,
   isInventoryRuleItem
 } from "../utils/inventoryItemRules";
 import {
   formatInventoryQuantityForDisplay,
   getSiomaiPackDescription,
-  getSiomaiPackSize,
   isSiomaiItem
 } from "../utils/siomaiUnits";
 
@@ -437,24 +437,24 @@ return (
     </div>
 
     <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap lg:justify-end">
-      <div className="grid grid-cols-3 gap-2 rounded-2xl border border-[#efe6dc] bg-[#fcfaf7] p-2">
-        <div className="min-w-0 rounded-xl bg-white px-3 py-2 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
+      <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-[#efe6dc] bg-[#fcfaf7] p-1.5 sm:gap-2 sm:p-2">
+        <div className="min-w-0 rounded-xl bg-white px-2 py-1.5 shadow-sm sm:px-3 sm:py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9a8b7d] sm:text-[11px] sm:tracking-[0.18em]">
             Items
           </p>
-          <p className="mt-1 text-lg font-semibold text-[#2b2018]">{totalItems}</p>
+          <p className="mt-1 text-base font-semibold text-[#2b2018] sm:text-lg">{totalItems}</p>
         </div>
-        <div className="min-w-0 rounded-xl bg-white px-3 py-2 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
+        <div className="min-w-0 rounded-xl bg-white px-2 py-1.5 shadow-sm sm:px-3 sm:py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9a8b7d] sm:text-[11px] sm:tracking-[0.18em]">
             Low
           </p>
-          <p className="mt-1 text-lg font-semibold text-[#c27a1a]">{lowStockCount}</p>
+          <p className="mt-1 text-base font-semibold text-[#c27a1a] sm:text-lg">{lowStockCount}</p>
         </div>
-        <div className="min-w-0 rounded-xl bg-white px-3 py-2 shadow-sm">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
+        <div className="min-w-0 rounded-xl bg-white px-2 py-1.5 shadow-sm sm:px-3 sm:py-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#9a8b7d] sm:text-[11px] sm:tracking-[0.18em]">
             Critical
           </p>
-          <p className="mt-1 text-lg font-semibold text-[#ff4d4f]">{criticalStockCount}</p>
+          <p className="mt-1 text-base font-semibold text-[#ff4d4f] sm:text-lg">{criticalStockCount}</p>
         </div>
       </div>
 
@@ -471,7 +471,7 @@ return (
 </div>
 
 {showForm && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 py-10">
+  <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/40 px-4 py-6 pb-32 sm:items-center sm:px-6 sm:py-10 sm:pb-10">
     <div className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-2xl">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[#1f1b16]">Add New Item</h2>
@@ -542,7 +542,9 @@ return (
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-[#5a4a3f]">Unit Cost (PHP)</label>
+            <label className="text-sm font-medium text-[#5a4a3f]">
+              {isInventoryRuleItem(form.name) ? "Unit Cost (PHP / 50-piece pack)" : "Unit Cost (PHP)"}
+            </label>
             <input
               type="number"
               min="0"
@@ -567,10 +569,8 @@ return (
             {(isSiomaiItem(form.name) || isInventoryRuleItem(form.name)) && (
               <p className="mt-2 text-xs text-[#9a8b7d]">
                 {isSiomaiItem(form.name)
-                  ? "Siomai stock is stored in packs."
-                  : "Paper cup stock is stored in packs."}{" "}
-                {getSiomaiPackDescription(form.name)}. Current stock equals{" "}
-                {Number(form.stock || 0) * getSiomaiPackSize(form.name)} pcs.
+                  ? `Siomai stock is stored in packs. ${getSiomaiPackDescription(form.name)}.`
+                  : `${getInventoryRuleHint(form.name)} Current stock is stored in pieces.`}
               </p>
             )}
           </div>
@@ -712,7 +712,7 @@ return (
         const isOutOfStock = item.stock === 0;
         const isLow = item.stock < item.threshold * settings.lowThresholdMultiplier;
         const isCritical = item.stock < item.threshold * settings.criticalThresholdPercent;
-        const statusLabel = isOutOfStock ? "Out of Stock" : isCritical ? "Critical" : isLow ? "Low" : "OK";
+        const statusLabel = isOutOfStock ? "Out of Stock" : isCritical ? "Very Low" : isLow ? "Low" : "OK";
         const statusClass = isOutOfStock || isCritical
           ? "bg-[#ffeceb] text-[#ff4d4f]"
           : isLow
@@ -736,9 +736,11 @@ return (
             <div className="text-sm font-semibold text-[#2b2018]">
               {formatInventoryQuantityForDisplay(item, item.stock, item.unit)}
             </div>
-            <div className="text-sm text-[#8c7b6d]">
-              PHP {Number(item.price || 0).toFixed(2)}
-            </div>
+              <div className="text-sm text-[#8c7b6d]">
+                {isInventoryRuleItem(item)
+                  ? getInventoryRulePriceLabel(item)
+                  : `PHP ${Number(item.price || 0).toFixed(2)}`}
+              </div>
             <div>
               <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${statusClass}`}>
                 {statusLabel.toUpperCase()}
@@ -800,7 +802,7 @@ return (
         const isOutOfStock = item.stock === 0;
         const isLow = item.stock < item.threshold * settings.lowThresholdMultiplier;
         const isCritical = item.stock < item.threshold * settings.criticalThresholdPercent;
-        const statusLabel = isOutOfStock ? "Out of Stock" : isCritical ? "Critical" : isLow ? "Low" : "OK";
+        const statusLabel = isOutOfStock ? "Out of Stock" : isCritical ? "Very Low" : isLow ? "Low" : "OK";
         const statusClass = isOutOfStock || isCritical
           ? "bg-[#ffeceb] text-[#ff4d4f]"
           : isLow
@@ -832,7 +834,11 @@ return (
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-[#9a8b7d]">Unit Cost</p>
-                <p className="mt-1 text-[#5a4a3f]">PHP {Number(item.price || 0).toFixed(2)}</p>
+                <p className="mt-1 text-[#5a4a3f]">
+                  {isInventoryRuleItem(item)
+                    ? getInventoryRulePriceLabel(item)
+                    : `PHP ${Number(item.price || 0).toFixed(2)}`}
+                </p>
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-[#9a8b7d]">Reorder</p>
@@ -979,7 +985,7 @@ return (
 </div>
 
 {editingItem && canManageInventory && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6 py-10">
+  <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto overscroll-contain bg-black/40 px-4 py-6 pb-32 sm:items-center sm:px-6 sm:py-10 sm:pb-10">
     <div className="w-full max-w-2xl rounded-2xl bg-white p-8 shadow-2xl">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[#1f1b16]">Edit Inventory Item</h2>
@@ -1053,7 +1059,9 @@ return (
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-[#5a4a3f]">Unit Cost (PHP)</label>
+            <label className="text-sm font-medium text-[#5a4a3f]">
+              {isEditingFixedItem ? "Unit Cost (PHP / 50-piece pack)" : "Unit Cost (PHP)"}
+            </label>
             <input
               type="number"
               min="0"

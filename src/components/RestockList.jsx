@@ -45,7 +45,7 @@ export default function RestockList() {
         )}
 
         {attentionItems.map((item) => {
-          const label = item.isCritical ? "CRITICAL" : "LOW";
+          const label = item.isCritical ? "VERY LOW" : "LOW";
           const badgeClass = item.isCritical
             ? "bg-[#ffeceb] text-[#d9413e]"
             : "bg-[#fff0d8] text-[#b85d11]";
