@@ -87,7 +87,7 @@ describe("StaffSales sale entry flow", () => {
 
     const branchButton = screen.getByRole("button", { name: "Talavera 2" });
     const firstProductInput = screen.getByLabelText("Product");
-    const firstQtyInput = screen.getByLabelText("Qty");
+    const firstQtyInput = screen.getByLabelText("Quantity sold");
     const notesInput = screen.getByPlaceholderText("Optional notes for this sale");
     const addItemButton = screen.getByRole("button", { name: "Add item" });
     const submitButton = screen.getByRole("button", { name: "Record Sale" });
@@ -105,7 +105,7 @@ describe("StaffSales sale entry flow", () => {
       expect(screen.getAllByLabelText("Product")[1]).toHaveFocus();
     });
     const secondProductInput = screen.getAllByLabelText("Product")[1];
-    const secondQtyInput = screen.getAllByLabelText("Qty")[1];
+    const secondQtyInput = screen.getAllByLabelText("Quantity sold")[1];
     await user.selectOptions(secondProductInput, "Regular Pork Siomai");
     fireEvent.change(secondQtyInput, { target: { value: "3" } });
     expect(secondQtyInput).toHaveValue(3);

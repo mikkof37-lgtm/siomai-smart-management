@@ -29,6 +29,7 @@ const UNIT_OPTIONS = [
 
 const SORT_OPTIONS = [
   { value: "manual", label: "Default order" },
+  { value: "recent", label: "Recently added" },
   { value: "name-asc", label: "Name A-Z" },
   { value: "name-desc", label: "Name Z-A" },
   { value: "category-asc", label: "Category A-Z" },
@@ -108,6 +109,7 @@ const { inventory, inventoryHistory, setInventory, isLoadingInventory, inventory
 const { settings } = useSettings();
 const canManageInventory = isAdminOrOwner(currentUser);
 const [query, setQuery] = useState("");
+const [categoryFilter, setCategoryFilter] = useState("");
 const [sortBy, setSortBy] = useState("manual");
 const [historyQuery, setHistoryQuery] = useState("");
 const [historyType, setHistoryType] = useState("all");
@@ -172,9 +174,10 @@ const criticalStockCount = useMemo(
     inventory.filter((item) => item.stock < item.threshold * settings.criticalThresholdPercent).length,
   [inventory, settings.criticalThresholdPercent]
 );
-const hasFilters = query.trim() !== "" || sortBy !== "manual";
+const hasFilters = query.trim() !== "" || categoryFilter !== "" || sortBy !== "manual";
 const clearFilters = () => {
   setQuery("");
+  setCategoryFilter("");
   setSortBy("manual");
 };
 const hasHistoryFilters = historyQuery.trim() !== "" || historyType !== "all";
@@ -185,15 +188,15 @@ const clearHistoryFilters = () => {
 
 const filteredItems = useMemo(() => {
   const q = query.trim().toLowerCase();
-  if (!q) return inventory;
   return inventory.filter((item) => {
-    return (
+    const matchesQuery = !q || (
       item.name.toLowerCase().includes(q) ||
       item.category.toLowerCase().includes(q) ||
       item.code.toLowerCase().includes(q)
     );
+    return matchesQuery && (!categoryFilter || item.category === categoryFilter);
   });
-}, [inventory, query]);
+}, [categoryFilter, inventory, query]);
 
 const organizedItems = useMemo(() => {
   const items = [...filteredItems];
@@ -205,6 +208,12 @@ const organizedItems = useMemo(() => {
   const compareText = (left, right) => left.localeCompare(right, undefined, { sensitivity: "base" });
 
   switch (sortBy) {
+    case "recent":
+      return items.sort((left, right) => {
+        const leftTime = Date.parse(left.createdAt || left.updatedAt || "") || 0;
+        const rightTime = Date.parse(right.createdAt || right.updatedAt || "") || 0;
+        return rightTime - leftTime || Number(right.id || 0) - Number(left.id || 0);
+      });
     case "name-asc":
       return items.sort((left, right) => compareText(left.name, right.name));
     case "name-desc":
@@ -669,6 +678,24 @@ return (
             Clear Filters
           </button>
         )}
+        <div className="flex items-center gap-2">
+          <label htmlFor="inventory-category-filter" className="sr-only">
+            Filter by category
+          </label>
+          <select
+            id="inventory-category-filter"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="rounded-xl border border-[#efe6dc] bg-white px-3 py-2 text-sm text-[#2a211a] shadow-sm outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
+          >
+            <option value="">All categories</option>
+            {categoryOptions.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a8b7d]">
             Sort

@@ -6,7 +6,11 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() =>
+    new URLSearchParams(window.location.search).get("confirmed") === "1"
+      ? "Email confirmed. You can sign in now."
+      : ""
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState("login");
@@ -223,6 +227,7 @@ export default function Login() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        autoFocus
                         autoComplete="email"
                         className="mt-1 w-full rounded-2xl border border-[rgba(97,72,56,0.12)] bg-white px-4 py-3 text-sm text-[#2a211a] outline-none transition focus:border-[#f46f1a] focus:ring-4 focus:ring-[#ffe2c8]"
                         placeholder="name@company.com"

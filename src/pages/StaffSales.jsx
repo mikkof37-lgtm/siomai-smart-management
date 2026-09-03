@@ -599,8 +599,24 @@ export default function StaffSales({ onLogout, currentUser }) {
                 </div>
 
                 <form onSubmit={handleFinalizeSale} className="space-y-6 px-6 py-6">
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-[#efe6dc] bg-[#fffaf5] p-2 sm:grid-cols-4">
+                    {[
+                      ["1", "Choose branch"],
+                      ["2", "Add items"],
+                      ["3", "Check total"],
+                      ["4", "Save sale"]
+                    ].map(([number, label]) => (
+                      <div key={number} className="rounded-xl bg-white px-3 py-2 text-center shadow-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#c96f15]">
+                          Step {number}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold text-[#5a4a3f]">{label}</p>
+                      </div>
+                    ))}
+                  </div>
                   <div>
-                    <p className="text-sm font-medium text-[#5a4a3f]">Branch</p>
+                    <p className="text-sm font-semibold text-[#2b2018]">Step 1: Choose branch</p>
+                    <p className="mt-1 text-sm text-[#8c7b6d]">Select where this sale happened.</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {BRANCH_OPTIONS.map((branch) => (
                         <button
@@ -628,7 +644,7 @@ export default function StaffSales({ onLogout, currentUser }) {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <label htmlFor="sale-date" className="text-sm font-medium text-[#5a4a3f]">
-                        Sale Date
+                        Sale date
                       </label>
                       <input
                         id="sale-date"
@@ -642,7 +658,7 @@ export default function StaffSales({ onLogout, currentUser }) {
                     </div>
                     <div>
                       <label htmlFor="sale-notes" className="text-sm font-medium text-[#5a4a3f]">
-                        Notes
+                        Notes (optional)
                       </label>
                       <input
                         id="sale-notes"
@@ -660,9 +676,9 @@ export default function StaffSales({ onLogout, currentUser }) {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <h2 className="text-lg font-semibold text-[#2b2018]">Sold Items</h2>
+                        <h2 className="text-lg font-semibold text-[#2b2018]">Step 2: Add sold items</h2>
                         <p className="mt-1 text-sm text-[#8c7b6d]">
-                          Add all items for this branch sale before recording.
+                          Choose each product and enter the pieces or units sold. Included supplies stay at PHP 0.
                         </p>
                       </div>
                       <button
@@ -722,7 +738,7 @@ export default function StaffSales({ onLogout, currentUser }) {
                                 htmlFor={`item-qty-${line.id}`}
                                 className="text-sm font-medium text-[#5a4a3f]"
                               >
-                                Qty
+                                Quantity sold
                               </label>
                               <p className="mt-1 text-[11px] leading-4 text-[#9a8b7d]">
                                 {line.selectedInventoryItem
