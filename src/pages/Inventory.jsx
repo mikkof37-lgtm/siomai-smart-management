@@ -126,6 +126,7 @@ const [form, setForm] = useState({
   maxStock: ""
 });
 const [formError, setFormError] = useState("");
+const [notice, setNotice] = useState("");
 const [editingItem, setEditingItem] = useState(null);
 const [editForm, setEditForm] = useState({
   name: "",
@@ -262,6 +263,14 @@ const handleAddItem = (e) => {
   const minStock = form.minStock === "" ? "" : Number(form.minStock);
   const maxStock = form.maxStock === "" ? "" : Number(form.maxStock);
 
+  const duplicateItem = inventory.find(
+    (item) => item.name.trim().toLowerCase() === name.toLowerCase()
+  );
+  if (duplicateItem) {
+    setFormError(`An item named ${duplicateItem.name} already exists. Choose a different name.`);
+    return;
+  }
+
   if (!name || !category || !unit) {
     setFormError("Please fill in all required fields.");
     return;
@@ -320,6 +329,7 @@ const handleAddItem = (e) => {
     maxStock: ""
   });
   setShowForm(false);
+  setNotice(`${name} was added to inventory.`);
 };
 
 const openEdit = (item) => {
@@ -349,7 +359,14 @@ const closeEdit = () => {
 
 const handleDelete = (id) => {
   if (!canManageInventory) return;
+  const item = inventory.find((entry) => entry.id === id);
+  if (!item) return;
+  const confirmed = window.confirm(
+    `Delete ${item.name} from inventory? This removes the item from active inventory and cannot be undone from this screen.`
+  );
+  if (!confirmed) return;
   setInventory((prev) => prev.filter((item) => item.id !== id));
+  setNotice(`${item.name} was deleted from inventory.`);
   if (editingItem && editingItem.id === id) {
     closeEdit();
   }
@@ -416,6 +433,7 @@ const handleEditSave = (e) => {
     })
   );
 
+  setNotice(`${name} was updated successfully.`);
   closeEdit();
 };
 
@@ -450,6 +468,11 @@ return (
       )}
       {!isLoadingInventory && inventorySyncError && (
         <p className="mt-3 text-xs font-medium text-[#c27a1a]">{inventorySyncError}</p>
+      )}
+      {notice && !inventorySyncError && (
+        <p className="mt-3 rounded-xl border border-[#dcefd8] bg-[#f4fbf1] px-3 py-2 text-xs font-medium text-[#2e7d46]">
+          {notice}
+        </p>
       )}
     </div>
 
