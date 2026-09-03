@@ -52,7 +52,7 @@ export default function Dashboard({ onLogout, currentUser }) {
             </div>
           </div>
 
-          <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-6 xl:grid-cols-4">
+          <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-6 xl:grid-cols-3">
             <StatsCard
               title="Sales this month"
               value={`PHP ${totalRevenue.toLocaleString(undefined, {
