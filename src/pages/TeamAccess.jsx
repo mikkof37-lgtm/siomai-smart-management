@@ -196,18 +196,18 @@ export default function TeamAccess({ onLogout, currentUser }) {
         />
 
         <div className="px-4 pb-28 pt-4 sm:px-6 sm:pb-28 sm:pt-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm text-[#8c7b6d]">Current role</p>
-              <p className="mt-2 text-2xl font-semibold text-[#2b2018]">{ROLE_LABELS[currentRole] || currentRole}</p>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 md:gap-4">
+            <div className="rounded-2xl border border-[#efe6dc] bg-white p-3 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)] sm:p-5">
+              <p className="text-xs text-[#8c7b6d] sm:text-sm">Current role</p>
+              <p className="mt-1 text-xl font-semibold text-[#2b2018] sm:mt-2 sm:text-2xl">{ROLE_LABELS[currentRole] || currentRole}</p>
             </div>
-            <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm text-[#8c7b6d]">Current branch</p>
-              <p className="mt-2 text-2xl font-semibold text-[#2b2018]">{branchLabel(currentBranch)}</p>
+            <div className="rounded-2xl border border-[#efe6dc] bg-white p-3 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)] sm:p-5">
+              <p className="text-xs text-[#8c7b6d] sm:text-sm">Current branch</p>
+              <p className="mt-1 text-xl font-semibold text-[#2b2018] sm:mt-2 sm:text-2xl">{branchLabel(currentBranch)}</p>
             </div>
-            <div className="rounded-2xl border border-[#efe6dc] bg-white p-5 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)]">
-              <p className="text-sm text-[#8c7b6d]">Managed users</p>
-              <p className="mt-2 text-2xl font-semibold text-[#2b2018]">{users.length}</p>
+            <div className="col-span-2 rounded-2xl border border-[#efe6dc] bg-white p-3 shadow-[0_14px_40px_-30px_rgba(58,41,29,0.6)] sm:p-5 md:col-span-1">
+              <p className="text-xs text-[#8c7b6d] sm:text-sm">Managed users</p>
+              <p className="mt-1 text-xl font-semibold text-[#2b2018] sm:mt-2 sm:text-2xl">{users.length}</p>
             </div>
           </div>
 

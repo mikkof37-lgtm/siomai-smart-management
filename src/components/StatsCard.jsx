@@ -18,17 +18,17 @@ export default function StatsCard({
         : "text-gray-500";
 
   return (
-    <div className="rounded-[24px] border border-[var(--surface-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,247,0.92)_100%)] p-5 shadow-[var(--shadow-soft)]">
-      <div className="flex items-start justify-between gap-4">
+    <div className="rounded-[24px] border border-[var(--surface-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(255,251,247,0.92)_100%)] p-4 shadow-[var(--shadow-soft)] sm:p-5">
+      <div className="flex items-start justify-between gap-2 sm:gap-4">
         <div className="min-w-0">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+          <h3 className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
             {title}
           </h3>
-          <p className={`mt-2 text-[1.65rem] font-semibold leading-none ${valueClassName}`}>{value}</p>
-          <p className={`mt-2 text-sm ${trendClass}`}>{desc}</p>
+          <p className={`mt-2 text-[1.2rem] font-semibold leading-none sm:text-[1.65rem] ${valueClassName}`}>{value}</p>
+          <p className={`mt-1 text-xs sm:mt-2 sm:text-sm ${trendClass}`}>{desc}</p>
         </div>
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--surface-border)] ${iconBg} ${iconColor}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--surface-border)] ${iconBg} ${iconColor} sm:h-11 sm:w-11 sm:rounded-2xl`}
         >
           {icon}
         </div>

@@ -523,32 +523,32 @@ export default function StaffSales({ onLogout, currentUser }) {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
                     Branch
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-[var(--app-text)]">
+                  <p className="mt-1 text-lg font-semibold text-[var(--app-text)] sm:mt-2 sm:text-xl">
                     {getBranchLabel(receiptDraft.branch) || "Unassigned"}
                   </p>
                 </div>
-                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
                     Draft total
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-[var(--app-text)]">{formatCurrency(receiptTotal)}</p>
+                  <p className="mt-1 text-lg font-semibold text-[var(--app-text)] sm:mt-2 sm:text-xl">{formatCurrency(receiptTotal)}</p>
                 </div>
-                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
                     Today
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-[#b85d11]">{branchSalesCount}</p>
+                  <p className="mt-1 text-lg font-semibold text-[#b85d11] sm:mt-2 sm:text-xl">{branchSalesCount}</p>
                 </div>
-                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/85 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
                     Attention
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-[#b85d11]">{lowStockItems.length}</p>
+                  <p className="mt-1 text-lg font-semibold text-[#b85d11] sm:mt-2 sm:text-xl">{lowStockItems.length}</p>
                 </div>
               </div>
             </div>

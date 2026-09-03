@@ -114,28 +114,28 @@ export default function DemandForecast({ onLogout, currentUser }) {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/90 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/90 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
                     Horizon
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-[var(--app-text)]">
+                  <p className="mt-1 text-lg font-semibold text-[var(--app-text)] sm:mt-2 sm:text-xl">
                     {forecast ? `${forecast.horizonDays} days` : `${horizonDays} days`}
                   </p>
                 </div>
-                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/90 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/90 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
                     Confidence
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-[var(--app-text)]">
+                  <p className="mt-1 text-lg font-semibold text-[var(--app-text)] sm:mt-2 sm:text-xl">
                     {forecast ? `${Math.round(forecast.confidence)}%` : "--"}
                   </p>
                 </div>
-                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/90 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/90 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
                     Projected units
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-[#b85d11]">
+                  <p className="mt-1 text-lg font-semibold text-[#b85d11] sm:mt-2 sm:text-xl">
                     {forecast
                       ? formatNumber(
                           forecastData.reduce((sum, entry) => sum + Number(entry.predictedUnits || 0), 0)
@@ -143,11 +143,11 @@ export default function DemandForecast({ onLogout, currentUser }) {
                       : "--"}
                   </p>
                 </div>
-                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/90 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--surface-muted)]">
+                <div className="rounded-[20px] border border-[rgba(97,72,56,0.12)] bg-white/90 p-3 sm:p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--surface-muted)] sm:text-[11px] sm:tracking-[0.18em]">
                     Signal
                   </p>
-                  <p className="mt-2 text-xl font-semibold text-[#b85d11]">
+                  <p className="mt-1 text-lg font-semibold text-[#b85d11] sm:mt-2 sm:text-xl">
                     {forecast ? forecast.source : "Pending"}
                   </p>
                 </div>

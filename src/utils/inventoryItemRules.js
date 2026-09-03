@@ -36,6 +36,13 @@ export function getInventoryRuleHint(value) {
   )} per pack of ${rule.packSize} pcs.`;
 }
 
+export function getInventoryRulePriceLabel(value) {
+  const rule = getRule(value);
+  if (!rule) return "";
+
+  return `PHP ${Number(rule.price || 0).toFixed(2)} per pack of ${rule.packSize} pcs`;
+}
+
 export function applyInventoryItemRules(item) {
   if (!item || typeof item !== "object") return item;
 
