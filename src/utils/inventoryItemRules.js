@@ -31,7 +31,7 @@ export function getInventoryRuleHint(value) {
 
   if (!rule) return "";
 
-  return `${name} is displayed in pieces. Restocking costs PHP ${Number(rule.price || 0).toFixed(
+  return `${name} is displayed in packs. Restocking costs PHP ${Number(rule.price || 0).toFixed(
     2
   )} per pack of ${rule.packSize} pcs.`;
 }

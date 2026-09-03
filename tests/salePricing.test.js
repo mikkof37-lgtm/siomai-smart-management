@@ -29,7 +29,7 @@ describe("sale pricing rules", () => {
 
     expect(paperCups.unit).toBe("pieces");
     expect(paperCups.price).toBe(100);
-    expect(getInventoryRuleHint(paperCups)).toContain("displayed in pieces");
+    expect(getInventoryRuleHint(paperCups)).toContain("displayed in packs");
     expect(getInventoryRulePriceLabel(paperCups)).toBe("PHP 100.00");
   });
 
