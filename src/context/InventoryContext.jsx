@@ -140,14 +140,27 @@ function readStoredDeletedInventoryIds() {
   }
 }
 
-function mergeInventorySnapshots(remoteItems, localItems, deletedIds = []) {
+function mergeInventorySnapshots(remoteItems, localItems, deletedIds = [], baseItems = []) {
   const tombstones = new Set(normalizeInventoryIdList(deletedIds));
   const mergedById = new Map();
+  const baseById = new Map(normalizeInventory(baseItems).map((item) => [String(item.id), item]));
 
-  [...normalizeInventory(remoteItems), ...normalizeInventory(localItems)].forEach((item) => {
+  normalizeInventory(remoteItems).forEach((item) => {
     if (tombstones.has(String(item.id))) return;
     mergedById.set(String(item.id), item);
   });
+
+  // Keep only local changes that differ from the last known remote snapshot.
+  // This prevents an old browser cache from overriding current Supabase data.
+  if (baseById.size > 0) {
+    normalizeInventory(localItems).forEach((item) => {
+      if (tombstones.has(String(item.id))) return;
+      const baseItem = baseById.get(String(item.id));
+      if (!baseItem || !sameInventoryItem(item, baseItem)) {
+        mergedById.set(String(item.id), item);
+      }
+    });
+  }
 
   return deduplicateInventory([...mergedById.values()]);
 }
@@ -719,7 +732,8 @@ export function InventoryProvider({ children }) {
         const mergedSnapshot = mergeInventorySnapshots(
           normalized,
           inventoryStateRef.current || [],
-          loadDeletedIds
+          loadDeletedIds,
+          lastSyncedInventoryRef.current || []
         );
         const schemaVersion = Number(localStorage.getItem(ITEM_CODE_SCHEMA_KEY) || "0");
         const nextItems =
