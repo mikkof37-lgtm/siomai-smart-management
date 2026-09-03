@@ -166,6 +166,22 @@ export default function StaffSales({ onLogout, currentUser }) {
         unitPrice,
         inventoryQty,
         lineTotal,
+        stockError:
+          selectedInventoryItem &&
+          Number.isFinite(qty) &&
+          qty > 0 &&
+          inventoryQty > Number(selectedInventoryItem.stock || 0)
+            ? `Not enough stock. Available: ${formatInventoryQuantityForDisplay(
+                selectedInventoryItem,
+                getSaleStockDisplayQuantity(
+                  selectedInventoryItem,
+                  selectedInventoryItem.stock
+                ),
+                isPaperCupItem(selectedInventoryItem)
+                  ? "pieces"
+                  : selectedInventoryItem.unit || "units"
+              )}.`
+            : "",
         remainingStock:
           selectedInventoryItem && Number.isFinite(qty)
             ? Math.max(0, Number(selectedInventoryItem.stock || 0) - inventoryQty)
@@ -177,6 +193,7 @@ export default function StaffSales({ onLogout, currentUser }) {
   const validLineItems = lineItems.filter(
     (line) => line.product.trim() && Number.isFinite(line.qty) && line.qty > 0 && line.selectedInventoryItem
   );
+  const hasStockErrors = lineItems.some((line) => line.stockError);
 
   const receiptTotal = useMemo(() => {
     return validLineItems.reduce((sum, line) => sum + line.lineTotal, 0);
@@ -435,8 +452,8 @@ export default function StaffSales({ onLogout, currentUser }) {
         setRecordError(
           `Not enough stock for ${inventoryItem.name}. Available: ${formatInventoryQuantityForDisplay(
             inventoryItem,
-            inventoryItem.stock,
-            inventoryItem.unit || "units"
+            getSaleStockDisplayQuantity(inventoryItem, inventoryItem.stock),
+            isPaperCupItem(inventoryItem) ? "pieces" : inventoryItem.unit || "units"
           )}.`
         );
         return;
@@ -729,9 +746,19 @@ export default function StaffSales({ onLogout, currentUser }) {
                                   updateLineItem(line.id, "qty", e.target.value)
                                 }
                                 onFocus={(e) => e.target.select()}
-                                className="mt-1 h-11 w-full rounded-xl border border-[#efe5db] bg-white px-3 py-2.5 text-center text-sm font-semibold text-[#2a211a] outline-none transition focus:border-[#ffb47b] focus:ring-4 focus:ring-[#ffe2c8]"
+                                aria-invalid={Boolean(line.stockError)}
+                                className={`mt-1 h-11 w-full rounded-xl border bg-white px-3 py-2.5 text-center text-sm font-semibold text-[#2a211a] outline-none transition focus:ring-4 ${
+                                  line.stockError
+                                    ? "border-[#f29b91] focus:border-[#d65b4d] focus:ring-[#ffe1dd]"
+                                    : "border-[#efe5db] focus:border-[#ffb47b] focus:ring-[#ffe2c8]"
+                                }`}
                                 placeholder="1"
                               />
+                              {line.stockError && (
+                                <p className="mt-1 text-xs font-medium text-[#d65b4d]">
+                                  {line.stockError}
+                                </p>
+                              )}
                             </div>
 
                             <div className="rounded-2xl border border-[#ffd7b3] bg-[#fff1e3] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
@@ -793,7 +820,8 @@ export default function StaffSales({ onLogout, currentUser }) {
                         </button>
                         <button
                           type="submit"
-                          className="rounded-xl bg-[#ff7a1a] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00]"
+                          disabled={hasStockErrors}
+                          className="rounded-xl bg-[#ff7a1a] px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-orange-200 transition hover:bg-[#ff6a00] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Record Sale
                         </button>
