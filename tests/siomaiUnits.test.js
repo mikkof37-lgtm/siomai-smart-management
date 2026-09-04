@@ -64,4 +64,15 @@ describe("siomai unit helpers", () => {
 
     expect(normalized.price).toBe(2400);
   });
+
+  test("normalizes regular pork siomai to the PHP 2400 owner pack cost", () => {
+    const normalized = normalizeSiomaiInventoryItem({
+      name: "Regular Pork Siomai",
+      stock: 12,
+      unit: "packs",
+      price: 120
+    });
+
+    expect(normalized.price).toBe(2400);
+  });
 });

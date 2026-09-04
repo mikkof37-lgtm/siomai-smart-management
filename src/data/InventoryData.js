@@ -7,7 +7,7 @@ export const inventory = [
     stock: 45,
     unit: "packs",
     threshold: 100,
-    price: 120,
+    price: 2400,
     updatedAt: "2 mins ago"
   },
   {
@@ -29,7 +29,7 @@ export const inventory = [
     stock: 85,
     unit: "packs",
     threshold: 120,
-    price: 110,
+    price: 2400,
     updatedAt: "1 hour ago"
   },
   {
