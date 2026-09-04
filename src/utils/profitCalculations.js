@@ -7,7 +7,13 @@ const toFiniteNumber = (value, fallback = 0) => {
 
 function findInventoryItem(sale, inventory) {
   const saleItemId = sale?.inventoryItemId;
-  const saleItemName = typeof sale?.inventoryItemName === "string" ? sale.inventoryItemName.trim().toLowerCase() : "";
+  const saleItemName = (
+    typeof sale?.inventoryItemName === "string" && sale.inventoryItemName.trim()
+      ? sale.inventoryItemName
+      : sale?.product
+  )
+    ?.trim()
+    .toLowerCase() || "";
 
   return inventory.find((item) => {
     if (saleItemId !== undefined && saleItemId !== null && String(item.id) === String(saleItemId)) {

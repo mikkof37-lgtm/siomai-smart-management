@@ -24,6 +24,16 @@ describe("profit calculations", () => {
     expect(result).toMatchObject({ revenue: 2665, cogs: 1200, grossProfit: 1465 });
   });
 
+  test("matches older sales records by product name", () => {
+    const result = getSaleProfitBreakdown(
+      { product: "Regular Pork Siomai", qty: 500, price: 5.33 },
+      [{ id: 3, name: "Regular Pork Siomai", price: 2400, unit: "packs" }]
+    );
+
+    expect(result.cogs).toBe(1200);
+    expect(result.grossProfit).toBe(1465);
+  });
+
   test("uses the 50-piece conversion for paper cup profit", () => {
     const result = getSaleProfitBreakdown(
       { inventoryItemId: 2, product: "Paper Cups", qty: 10, price: 12 },
